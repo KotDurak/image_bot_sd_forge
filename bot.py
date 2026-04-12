@@ -372,4 +372,18 @@ def main():
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
-    main()
+    restart_count = 0
+
+    while True:
+        try:
+            main()
+            restart_count = 0  # сброс если вдруг нормально вышел
+        except Exception as e:
+            restart_count += 1
+            logger.error(f"🔥 Краш #{restart_count}: {e}", exc_info=True)
+
+            if restart_count > 5:
+                logger.critical("💀 Слишком много падений. Ждём 60 сек...")
+                time.sleep(60)
+            else:
+                time.sleep(5)
