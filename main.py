@@ -11,33 +11,15 @@ from handlers import commands, callbacks
 from services.queue_manager import GenerationQueue
 import signal
 import sys
-import os
+from pathlib import Path
 
-if sys.platform == "win32":
-    os.environ["PYTHONUTF8"] = "1"
-    os.environ["PYTHONIOENCODING"] = "utf-8"
-    # Для консоли (если запускаешь не как службу)
-    try:
-        sys.stdout.reconfigure(encoding='utf-8')
-        sys.stderr.reconfigure(encoding='utf-8')
-    except:
-        pass
-
-def _graceful_shutdown(signum, frame):
-    """Корректное завершение при Ctrl+C, kill, выключении ПК"""
-    logger.info(f"📡 Получен сигнал {signum}. Останавливаем бота и закрываем БД...")
-    from database import db, close_db
-    try:
-        close_db()
-    except Exception:
-        pass
-    sys.exit(0)
-
-
+# ─── Настройка окружения ─────────────────────────────────────────────────────
+PROJECT_DIR = Path(__file__).parent
 setup_logging()
 logger = logging.getLogger(__name__)
 
-queue_manager: GenerationQueue = None
+queue_manager = GenerationQueue(max_concurrent=1)
+app = None
 
 async def generate_with_queue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Wrapper для передачи queue_manager в handler"""
@@ -61,61 +43,62 @@ def register_handlers(app: Application):
     app.add_handler(CallbackQueryHandler(callbacks.main_menu_callback, pattern="^main_menu$"))
 
 
-def main():
-    global queue_manager
-    init_db()
-    # Инициализируем очередь
-    queue_manager = GenerationQueue(max_concurrent=1)
-
-    app = (Application.builder()
-           .request(
-        HTTPXRequest(
-            connect_timeout=30,  # ⏱ Подключение: 30 сек
-            read_timeout=60,  # ⏱ Чтение ответа: 60 сек
-            write_timeout=60,  # ⏱ Отправка данных: 60 сек
-            pool_timeout=30  # ⏱ Ожидание свободного соединения
-        )
-    )
-       .token(config.TELEGRAM_TOKEN).build())
-
-    register_handlers(app)
-
+# ─── Асинхронный цикл бота ───────────────────────────────────────────────────
+async def run_bot():
+    await queue_manager.start()
     logger.info("🤖 Бот запущен и готов к творчеству!")
 
-    # Запускаем бота и очередь
-    async def run_bot():
-        await queue_manager.start()
-        try:
-            await app.initialize()
-            await app.start()
-            if app.updater:
-                await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-                # Держим бота запущенным
-                while True:
-                    await asyncio.sleep(1)
-        finally:
-            await queue_manager.stop()
-            if app.updater:
-                await app.updater.stop()
-            await app.stop()
-            close_db()
-            await app.shutdown()
+    try:
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+        while True:
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        logger.info("🛑 Получен сигнал остановки")
+    finally:
+        logger.info("🧹 Корректное завершение работы...")
+        if app.updater and app.updater.running:
+            await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
+        await queue_manager.stop()
+        close_db()
+        logger.info("✅ Бот остановлен. Коты довольны.")
 
-    # Запускаем в event loop
+# ─── Точка входа ─────────────────────────────────────────────────────────────
+def _shutdown_handler(sig, frame):
+    logger.info(f"📡 Получен сигнал {sig}. Останавливаем бота...")
+    sys.exit(0)
+
+def main():
+    global app
+    signal.signal(signal.SIGINT, _shutdown_handler)
+    signal.signal(signal.SIGTERM, _shutdown_handler)
+    if sys.platform == "win32":
+        signal.signal(signal.SIGBREAK, _shutdown_handler)
+
+    init_db()
+
+    app = Application.builder() \
+        .token(config.TELEGRAM_TOKEN) \
+        .request(HTTPXRequest(connect_timeout=30, read_timeout=60, write_timeout=60, pool_timeout=30)) \
+        .build()
+
+    register_handlers(app)
     asyncio.run(run_bot())
 
-
 if __name__ == "__main__":
-    restart_count = 0
+    restarts = 0
     while True:
         try:
             main()
-            restart_count = 0
+            restarts = 0
         except Exception as e:
-            restart_count += 1
-            logger.error(f"🔥 Краш #{restart_count}: {e}", exc_info=True)
-            if restart_count > 5:
-                logger.critical("💀 Слишком много падений. Ждём 60 сек...")
+            restarts += 1
+            logger.error(f"🔥 Краш #{restarts}: {e}", exc_info=True)
+            if restarts > 5:
+                logger.critical("💀 Слишком много падений. Пауза 60с...")
                 time.sleep(60)
             else:
                 time.sleep(5)

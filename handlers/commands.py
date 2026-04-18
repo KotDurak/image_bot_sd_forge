@@ -37,10 +37,11 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
     """Обработчик /gen — добавляет запрос в очередь"""
     user_id = update.effective_user.id
 
-    if user_id not in config.ALLOWED_USERS:
+    #TODO Настроить более адекватную проверку на доступы (через бд)
+    ''' if user_id not in config.ALLOWED_USERS:
         await update.message.reply_text("🔒 Доступ только для своих. Обратись к админу.")
-        return
-
+        return 
+    '''
     prompt = " ".join(context.args) if context.args else update.message.text.replace("/gen", "").strip()
 
     if not prompt:
