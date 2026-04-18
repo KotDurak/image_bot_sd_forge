@@ -2,3 +2,10 @@
 /.venv/
 .idea/
 __pycache__/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+__pycache__
+/bot.log

@@ -7,6 +7,7 @@ FORGE_URL = os.getenv("FORGE_URL", "http://localhost:7860")
 API_USER = os.getenv("API_USER", "")
 API_PASS = os.getenv("API_PASS", "")
 API_AUTH = (API_USER, API_PASS)
+MODE = os.getenv("MODE", "PROD")
 
 allowed_users_list = [int(user_id)  for user_id in os.getenv("ALLOWED_USERS", "").split(",")]
 ALLOWED_USERS = set(allowed_users_list)
