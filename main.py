@@ -66,39 +66,33 @@ async def run_bot():
         close_db()
         logger.info("✅ Бот остановлен. Коты довольны.")
 
-# ─── Точка входа ─────────────────────────────────────────────────────────────
-def _shutdown_handler(sig, frame):
-    logger.info(f"📡 Получен сигнал {sig}. Останавливаем бота...")
-    sys.exit(0)
-
-def main():
-    global app
-    signal.signal(signal.SIGINT, _shutdown_handler)
-    signal.signal(signal.SIGTERM, _shutdown_handler)
-    if sys.platform == "win32":
-        signal.signal(signal.SIGBREAK, _shutdown_handler)
-
-    init_db()
-
+async def run_bot():
+    # Настраиваем приложение
     app = Application.builder() \
         .token(config.TELEGRAM_TOKEN) \
-        .request(HTTPXRequest(connect_timeout=30, read_timeout=60, write_timeout=60, pool_timeout=30)) \
+        .request(HTTPXRequest(connect_timeout=10, read_timeout=20)) \
         .build()
 
     register_handlers(app)
-    asyncio.run(run_bot())
+
+
+    async with app:
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling(drop_pending_updates=True)
+        await asyncio.Event().wait()  # Держим бота запущенным
+
+
+def main():
+    init_db()
+
+    try:
+        asyncio.run(run_bot())
+    except KeyboardInterrupt:
+        pass  # Нормальный выход
+    except Exception as e:
+        logger.error(f"Глобальная ошибка: {e}")
+
 
 if __name__ == "__main__":
-    restarts = 0
-    while True:
-        try:
-            main()
-            restarts = 0
-        except Exception as e:
-            restarts += 1
-            logger.error(f"🔥 Краш #{restarts}: {e}", exc_info=True)
-            if restarts > 5:
-                logger.critical("💀 Слишком много падений. Пауза 60с...")
-                time.sleep(60)
-            else:
-                time.sleep(5)
+    main()
