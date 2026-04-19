@@ -4,9 +4,17 @@ module.exports = {
     script: "./main.py",
     // Используйте двойные обратные слеши в путях для Windows
     interpreter: "D:\\image_bot\\.venv\\Scripts\\python.exe",
+    cwd: "D:\\image_bot",
+    watch: false,
+    restart_delay: 3000,
+    max_restarts: 10,
+    min_uptime: "30s",
     watch: false,
     env: {
       NODE_ENV: "development",
-    }
+    },
+    error_file: "logs/err.log",
+    out_file: "logs/out.log",
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
   }]
 }

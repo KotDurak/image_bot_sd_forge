@@ -5,6 +5,7 @@ from services.forge_api import fetch_available_models
 from models.user_state import get_user_settings, update_user_settings
 from presets import get_preset_list
 import config
+from models.users_presets import get_user_preset
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +71,12 @@ async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     user_id = query.from_user.id
-    settings = get_user_settings(user_id)  # ✅ Используем новую функцию
-
+    settings = get_user_settings(user_id)
+    width, height = config.DEFAULTS['width'], config.DEFAULTS['height']
     current_model = settings.get("model")
     current_preset = settings.get("preset")
+    steps = config.DEFAULTS['cfg_scale']
+    user_preset = get_user_preset(user_id, current_preset)
 
     # Красивые названия для отображения
     model_display = current_model.split('/')[-1] if current_model else "по умолчанию"
@@ -81,13 +84,17 @@ async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     preset_display = "не выбран"
     if current_preset and current_preset in config.PRESETS:
         preset_display = config.PRESETS[current_preset].get("name", current_preset)
+    elif user_preset:
+        preset_display = user_preset.get('name')
+        steps = user_preset.get('steps')
+        width, height = user_preset.get('width'), user_preset.get('height')
 
     text = (
         "⚙️ **Ваши текущие настройки**:\n\n"
         f"🧠 Модель: `{model_display}`\n"
         f"🎨 Пресет: `{preset_display}`\n"
-        f"📏 Размер: {config.DEFAULTS['width']}×{config.DEFAULTS['height']}\n"
-        f"🔢 Шаги: {config.DEFAULTS['steps']}\n"
+        f"📏 Размер: {width}×{height}\n"
+        f"🔢 Шаги: {steps}\n"
         f"⚖️ CFG: {config.DEFAULTS['cfg_scale']}\n\n"
     )
 

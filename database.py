@@ -1,9 +1,11 @@
 import os
 import logging
 from peewee import (Model, SqliteDatabase, CharField,
-                    IntegerField, DateTimeField, TextField, fn, FloatField,OperationalError)
+                    IntegerField, DateTimeField, TextField, FloatField,OperationalError, BigIntegerField)
 from datetime import datetime
 import time
+from db.user_preset import UserPreset
+from db.user_quota import UserQuota
 
 logger = logging.getLogger(__name__)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'bot_data.db')
@@ -24,7 +26,7 @@ class BaseModel(Model):
 
 class UserSettings(BaseModel):
     """Настройки пользователя"""
-    user_id = IntegerField(unique=True, index=True)
+    user_id = BigIntegerField(unique=True, index=True)
     username = CharField(max_length=100, null=True)
 
     # Настройки генерации
@@ -74,7 +76,12 @@ class Meta:
 def init_db():
     """Создаёт таблицы если их нет"""
     db.connect(reuse_if_open=True)
-    db.create_tables([UserSettings, GenerationRequest], safe=True)
+    db.create_tables([
+        UserSettings,
+        GenerationRequest,
+        UserPreset,
+        UserQuota,
+     ], safe=True)
     db.close()
     logger.info(f"🗄️ БД инициализирована: {DB_PATH}")
 

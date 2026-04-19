@@ -1,0 +1,576 @@
+2026-04-19 09:10:23: --- Logging error ---
+2026-04-19 09:10:23: Traceback (most recent call last):
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:10:23:     stream.write(msg + self.terminator)
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:10:23:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:10:23: UnicodeEncodeError: 'charmap' codec can't encode characters in position 44-45: character maps to <undefined>
+2026-04-19 09:10:23: Call stack:
+2026-04-19 09:10:23:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:10:23:     main()
+2026-04-19 09:10:23:   File "D:\image_bot\main.py", line 90, in main
+2026-04-19 09:10:23:     init_db()
+2026-04-19 09:10:23:   File "D:\image_bot\database.py", line 79, in init_db
+2026-04-19 09:10:23:     logger.info(f"\U0001f5c4\ufe0f �� ����������������: {DB_PATH}")
+2026-04-19 09:10:23: Message: '\U0001f5c4\ufe0f �� ����������������: D:\\image_bot\\bot_data.db'
+2026-04-19 09:10:23: Arguments: ()
+2026-04-19 09:10:23: --- Logging error ---
+2026-04-19 09:10:23: Traceback (most recent call last):
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:10:23:     stream.write(msg + self.terminator)
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:10:23:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:10:23: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f916' in position 44: character maps to <undefined>
+2026-04-19 09:10:23: Call stack:
+2026-04-19 09:10:23:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:10:23:     main()
+2026-04-19 09:10:23:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:10:23:     asyncio.run(run_bot())
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:10:23:     return loop.run_until_complete(main)
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:10:23:     self.run_forever()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:10:23:     super().run_forever()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:10:23:     self._run_once()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:10:23:     handle._run()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:10:23:     self._context.run(self._callback, *self._args)
+2026-04-19 09:10:23:   File "D:\image_bot\main.py", line 60, in run_bot
+2026-04-19 09:10:23:     logger.info("\U0001f916 ��� ������� � ����� � ����������!")
+2026-04-19 09:10:23: Message: '\U0001f916 ��� ������� � ����� � ����������!'
+2026-04-19 09:10:23: Arguments: ()
+2026-04-19 09:10:23: --- Logging error ---
+2026-04-19 09:10:23: Traceback (most recent call last):
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:10:23:     stream.write(msg + self.terminator)
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:10:23:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:10:23: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f527' in position 58: character maps to <undefined>
+2026-04-19 09:10:23: Call stack:
+2026-04-19 09:10:23:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:10:23:     main()
+2026-04-19 09:10:23:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:10:23:     asyncio.run(run_bot())
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:10:23:     return loop.run_until_complete(main)
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:10:23:     self.run_forever()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:10:23:     super().run_forever()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:10:23:     self._run_once()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:10:23:     handle._run()
+2026-04-19 09:10:23:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:10:23:     self._context.run(self._callback, *self._args)
+2026-04-19 09:10:23:   File "D:\image_bot\services\queue_manager.py", line 72, in _worker_loop
+2026-04-19 09:10:23:     logger.info("\U0001f527 ������ ������� �������")
+2026-04-19 09:10:23: Message: '\U0001f527 ������ ������� �������'
+2026-04-19 09:10:23: Arguments: ()
+2026-04-19 09:10:51: --- Logging error ---
+2026-04-19 09:10:51: Traceback (most recent call last):
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:10:51:     stream.write(msg + self.terminator)
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:10:51:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:10:51: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f464' in position 53: character maps to <undefined>
+2026-04-19 09:10:51: Call stack:
+2026-04-19 09:10:51:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:10:51:     main()
+2026-04-19 09:10:51:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:10:51:     asyncio.run(run_bot())
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:10:51:     return loop.run_until_complete(main)
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:10:51:     self.run_forever()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:10:51:     super().run_forever()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:10:51:     self._run_once()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:10:51:     handle._run()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:10:51:     self._context.run(self._callback, *self._args)
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:10:51:     await self.__update_fetcher()
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:10:51:     await self.__process_update_wrapper(update)
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:10:51:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:10:51:     await self.do_process_update(update, coroutine)
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:10:51:     await coroutine
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:10:51:     await coroutine
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:10:51:     return await self.callback(update, context)
+2026-04-19 09:10:51:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:10:51:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:10:51:   File "D:\image_bot\handlers\commands.py", line 77, in generate
+2026-04-19 09:10:51:     logger.info(f"\U0001f464 User #{user_id}: model={model_name}, preset={preset_key}, prompt='{prompt[:50]}...'")
+2026-04-19 09:10:51: Message: "\U0001f464 User #513788558: model=boleromixPony_v233.safetensors [9223ce0e07], preset=None, prompt='lady and sugar daddy...'"
+2026-04-19 09:10:51: Arguments: ()
+2026-04-19 09:10:51: --- Logging error ---
+2026-04-19 09:10:51: Traceback (most recent call last):
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:10:51:     stream.write(msg + self.terminator)
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:10:51:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:10:51: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e5' in position 58: character maps to <undefined>
+2026-04-19 09:10:51: Call stack:
+2026-04-19 09:10:51:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:10:51:     main()
+2026-04-19 09:10:51:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:10:51:     asyncio.run(run_bot())
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:10:51:     return loop.run_until_complete(main)
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:10:51:     self.run_forever()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:10:51:     super().run_forever()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:10:51:     self._run_once()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:10:51:     handle._run()
+2026-04-19 09:10:51:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:10:51:     self._context.run(self._callback, *self._args)
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:10:51:     await self.__update_fetcher()
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:10:51:     await self.__process_update_wrapper(update)
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:10:51:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:10:51:     await self.do_process_update(update, coroutine)
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:10:51:     await coroutine
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:10:51:     await coroutine
+2026-04-19 09:10:51:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:10:51:     return await self.callback(update, context)
+2026-04-19 09:10:51:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:10:51:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:10:51:   File "D:\image_bot\handlers\commands.py", line 90, in generate
+2026-04-19 09:10:51:     await queue_manager.add_request(queue_item)
+2026-04-19 09:10:51:   File "D:\image_bot\services\queue_manager.py", line 67, in add_request
+2026-04-19 09:10:51:     logger.info(f"\U0001f4e5 ������ �� user_{item.user_id} �������� � ������� (������� #{position})")
+2026-04-19 09:10:51: Message: '\U0001f4e5 ������ �� user_513788558 �������� � ������� (������� #1)'
+2026-04-19 09:10:51: Arguments: ()
+2026-04-19 09:11:38: --- Logging error ---
+2026-04-19 09:11:38: Traceback (most recent call last):
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:11:38:     stream.write(msg + self.terminator)
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:11:38:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:11:38: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f464' in position 53: character maps to <undefined>
+2026-04-19 09:11:38: Call stack:
+2026-04-19 09:11:38:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:11:38:     main()
+2026-04-19 09:11:38:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:11:38:     asyncio.run(run_bot())
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:11:38:     return loop.run_until_complete(main)
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:11:38:     self.run_forever()
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:11:38:     super().run_forever()
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:11:38:     self._run_once()
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:11:38:     handle._run()
+2026-04-19 09:11:38:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:11:38:     self._context.run(self._callback, *self._args)
+2026-04-19 09:11:38:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:11:38:     await self.__update_fetcher()
+2026-04-19 09:11:38:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:11:38:     await self.__process_update_wrapper(update)
+2026-04-19 09:11:38:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:11:38:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:11:38:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:11:38:     await self.do_process_update(update, coroutine)
+2026-04-19 09:11:38:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:11:38:     await coroutine
+2026-04-19 09:11:38:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:11:38:     await coroutine
+2026-04-19 09:11:38:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:11:38:     return await self.callback(update, context)
+2026-04-19 09:11:38:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:11:38:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:11:38:   File "D:\image_bot\handlers\commands.py", line 77, in generate
+2026-04-19 09:11:38:     logger.info(f"\U0001f464 User #{user_id}: model={model_name}, preset={preset_key}, prompt='{prompt[:50]}...'")
+2026-04-19 09:11:38: Message: "\U0001f464 User #513788558: model=boleromixPony_v233.safetensors [9223ce0e07], preset=None, prompt='tiger...'"
+2026-04-19 09:11:38: Arguments: ()
+2026-04-19 09:11:39: --- Logging error ---
+2026-04-19 09:11:39: Traceback (most recent call last):
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:11:39:     stream.write(msg + self.terminator)
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:11:39:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:11:39: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e5' in position 58: character maps to <undefined>
+2026-04-19 09:11:39: Call stack:
+2026-04-19 09:11:39:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:11:39:     main()
+2026-04-19 09:11:39:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:11:39:     asyncio.run(run_bot())
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:11:39:     return loop.run_until_complete(main)
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:11:39:     self.run_forever()
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:11:39:     super().run_forever()
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:11:39:     self._run_once()
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:11:39:     handle._run()
+2026-04-19 09:11:39:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:11:39:     self._context.run(self._callback, *self._args)
+2026-04-19 09:11:39:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:11:39:     await self.__update_fetcher()
+2026-04-19 09:11:39:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:11:39:     await self.__process_update_wrapper(update)
+2026-04-19 09:11:39:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:11:39:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:11:39:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:11:39:     await self.do_process_update(update, coroutine)
+2026-04-19 09:11:39:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:11:39:     await coroutine
+2026-04-19 09:11:39:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:11:39:     await coroutine
+2026-04-19 09:11:39:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:11:39:     return await self.callback(update, context)
+2026-04-19 09:11:39:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:11:39:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:11:39:   File "D:\image_bot\handlers\commands.py", line 90, in generate
+2026-04-19 09:11:39:     await queue_manager.add_request(queue_item)
+2026-04-19 09:11:39:   File "D:\image_bot\services\queue_manager.py", line 67, in add_request
+2026-04-19 09:11:39:     logger.info(f"\U0001f4e5 ������ �� user_{item.user_id} �������� � ������� (������� #{position})")
+2026-04-19 09:11:39: Message: '\U0001f4e5 ������ �� user_513788558 �������� � ������� (������� #2)'
+2026-04-19 09:11:39: Arguments: ()
+2026-04-19 09:12:03: --- Logging error ---
+2026-04-19 09:12:03: Traceback (most recent call last):
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:12:03:     stream.write(msg + self.terminator)
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:12:03:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:12:03: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f464' in position 53: character maps to <undefined>
+2026-04-19 09:12:03: Call stack:
+2026-04-19 09:12:03:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:12:03:     main()
+2026-04-19 09:12:03:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:12:03:     asyncio.run(run_bot())
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:12:03:     return loop.run_until_complete(main)
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:12:03:     self.run_forever()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:12:03:     super().run_forever()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:12:03:     self._run_once()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:12:03:     handle._run()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:12:03:     self._context.run(self._callback, *self._args)
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:12:03:     await self.__update_fetcher()
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:12:03:     await self.__process_update_wrapper(update)
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:12:03:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:12:03:     await self.do_process_update(update, coroutine)
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:12:03:     await coroutine
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:12:03:     await coroutine
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:12:03:     return await self.callback(update, context)
+2026-04-19 09:12:03:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:12:03:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:12:03:   File "D:\image_bot\handlers\commands.py", line 77, in generate
+2026-04-19 09:12:03:     logger.info(f"\U0001f464 User #{user_id}: model={model_name}, preset={preset_key}, prompt='{prompt[:50]}...'")
+2026-04-19 09:12:03: Message: "\U0001f464 User #8039643413: model=boleromixPony_v233.safetensors [9223ce0e07], preset=None, prompt='cat...'"
+2026-04-19 09:12:03: Arguments: ()
+2026-04-19 09:12:03: --- Logging error ---
+2026-04-19 09:12:03: Traceback (most recent call last):
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:12:03:     stream.write(msg + self.terminator)
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:12:03:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:12:03: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e5' in position 58: character maps to <undefined>
+2026-04-19 09:12:03: Call stack:
+2026-04-19 09:12:03:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:12:03:     main()
+2026-04-19 09:12:03:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:12:03:     asyncio.run(run_bot())
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:12:03:     return loop.run_until_complete(main)
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:12:03:     self.run_forever()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:12:03:     super().run_forever()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:12:03:     self._run_once()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:12:03:     handle._run()
+2026-04-19 09:12:03:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:12:03:     self._context.run(self._callback, *self._args)
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:12:03:     await self.__update_fetcher()
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:12:03:     await self.__process_update_wrapper(update)
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:12:03:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:12:03:     await self.do_process_update(update, coroutine)
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:12:03:     await coroutine
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:12:03:     await coroutine
+2026-04-19 09:12:03:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:12:03:     return await self.callback(update, context)
+2026-04-19 09:12:03:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:12:03:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:12:03:   File "D:\image_bot\handlers\commands.py", line 90, in generate
+2026-04-19 09:12:03:     await queue_manager.add_request(queue_item)
+2026-04-19 09:12:03:   File "D:\image_bot\services\queue_manager.py", line 67, in add_request
+2026-04-19 09:12:03:     logger.info(f"\U0001f4e5 ������ �� user_{item.user_id} �������� � ������� (������� #{position})")
+2026-04-19 09:12:03: Message: '\U0001f4e5 ������ �� user_8039643413 �������� � ������� (������� #3)'
+2026-04-19 09:12:03: Arguments: ()
+2026-04-19 09:13:52: --- Logging error ---
+2026-04-19 09:13:52: Traceback (most recent call last):
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:13:52:     stream.write(msg + self.terminator)
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:13:52:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:13:52: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f464' in position 53: character maps to <undefined>
+2026-04-19 09:13:52: Call stack:
+2026-04-19 09:13:52:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:13:52:     main()
+2026-04-19 09:13:52:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:13:52:     asyncio.run(run_bot())
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:13:52:     return loop.run_until_complete(main)
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:13:52:     self.run_forever()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:13:52:     super().run_forever()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:13:52:     self._run_once()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:13:52:     handle._run()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:13:52:     self._context.run(self._callback, *self._args)
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:13:52:     await self.__update_fetcher()
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:13:52:     await self.__process_update_wrapper(update)
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:13:52:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:13:52:     await self.do_process_update(update, coroutine)
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:13:52:     await coroutine
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:13:52:     await coroutine
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:13:52:     return await self.callback(update, context)
+2026-04-19 09:13:52:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:13:52:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:13:52:   File "D:\image_bot\handlers\commands.py", line 77, in generate
+2026-04-19 09:13:52:     logger.info(f"\U0001f464 User #{user_id}: model={model_name}, preset={preset_key}, prompt='{prompt[:50]}...'")
+2026-04-19 09:13:52: Message: "\U0001f464 User #513788558: model=boleromixPony_v233.safetensors [9223ce0e07], preset=None, prompt='girl...'"
+2026-04-19 09:13:52: Arguments: ()
+2026-04-19 09:13:52: --- Logging error ---
+2026-04-19 09:13:52: Traceback (most recent call last):
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 09:13:52:     stream.write(msg + self.terminator)
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 09:13:52:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 09:13:52: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e5' in position 58: character maps to <undefined>
+2026-04-19 09:13:52: Call stack:
+2026-04-19 09:13:52:   File "D:\image_bot\main.py", line 101, in <module>
+2026-04-19 09:13:52:     main()
+2026-04-19 09:13:52:   File "D:\image_bot\main.py", line 93, in main
+2026-04-19 09:13:52:     asyncio.run(run_bot())
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 09:13:52:     return loop.run_until_complete(main)
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 09:13:52:     self.run_forever()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 09:13:52:     super().run_forever()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 09:13:52:     self._run_once()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 09:13:52:     handle._run()
+2026-04-19 09:13:52:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 09:13:52:     self._context.run(self._callback, *self._args)
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1233, in _update_fetcher
+2026-04-19 09:13:52:     await self.__update_fetcher()
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1229, in __update_fetcher
+2026-04-19 09:13:52:     await self.__process_update_wrapper(update)
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1244, in __process_update_wrapper
+2026-04-19 09:13:52:     await self._update_processor.process_update(update, self.process_update(update))
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 171, in process_update
+2026-04-19 09:13:52:     await self.do_process_update(update, coroutine)
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_baseupdateprocessor.py", line 196, in do_process_update
+2026-04-19 09:13:52:     await coroutine
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+2026-04-19 09:13:52:     await coroutine
+2026-04-19 09:13:52:   File "D:\image_bot\.venv\lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+2026-04-19 09:13:52:     return await self.callback(update, context)
+2026-04-19 09:13:52:   File "D:\image_bot\main.py", line 26, in generate_with_queue
+2026-04-19 09:13:52:     await commands.generate(update, context, queue_manager)
+2026-04-19 09:13:52:   File "D:\image_bot\handlers\commands.py", line 90, in generate
+2026-04-19 09:13:52:     await queue_manager.add_request(queue_item)
+2026-04-19 09:13:52:   File "D:\image_bot\services\queue_manager.py", line 67, in add_request
+2026-04-19 09:13:52:     logger.info(f"\U0001f4e5 ������ �� user_{item.user_id} �������� � ������� (������� #{position})")
+2026-04-19 09:13:52: Message: '\U0001f4e5 ������ �� user_513788558 �������� � ������� (������� #4)'
+2026-04-19 09:13:52: Arguments: ()
+2026-04-19 13:20:04: --- Logging error ---
+2026-04-19 13:20:04: Traceback (most recent call last):
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 13:20:04:     stream.write(msg + self.terminator)
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 13:20:04:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 13:20:04: UnicodeEncodeError: 'charmap' codec can't encode characters in position 44-45: character maps to <undefined>
+2026-04-19 13:20:04: Call stack:
+2026-04-19 13:20:04:   File "D:\image_bot\main.py", line 106, in <module>
+2026-04-19 13:20:04:     main()
+2026-04-19 13:20:04:   File "D:\image_bot\main.py", line 95, in main
+2026-04-19 13:20:04:     init_db()
+2026-04-19 13:20:04:   File "D:\image_bot\database.py", line 84, in init_db
+2026-04-19 13:20:04:     logger.info(f"\U0001f5c4\ufe0f �� ����������������: {DB_PATH}")
+2026-04-19 13:20:04: Message: '\U0001f5c4\ufe0f �� ����������������: D:\\image_bot\\bot_data.db'
+2026-04-19 13:20:04: Arguments: ()
+2026-04-19 13:20:04: --- Logging error ---
+2026-04-19 13:20:04: Traceback (most recent call last):
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 13:20:04:     stream.write(msg + self.terminator)
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 13:20:04:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 13:20:04: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f916' in position 44: character maps to <undefined>
+2026-04-19 13:20:04: Call stack:
+2026-04-19 13:20:04:   File "D:\image_bot\main.py", line 106, in <module>
+2026-04-19 13:20:04:     main()
+2026-04-19 13:20:04:   File "D:\image_bot\main.py", line 98, in main
+2026-04-19 13:20:04:     asyncio.run(run_bot())
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 13:20:04:     return loop.run_until_complete(main)
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 13:20:04:     self.run_forever()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 13:20:04:     super().run_forever()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 13:20:04:     self._run_once()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 13:20:04:     handle._run()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 13:20:04:     self._context.run(self._callback, *self._args)
+2026-04-19 13:20:04:   File "D:\image_bot\main.py", line 65, in run_bot
+2026-04-19 13:20:04:     logger.info("\U0001f916 ��� ������� � ����� � ����������!")
+2026-04-19 13:20:04: Message: '\U0001f916 ��� ������� � ����� � ����������!'
+2026-04-19 13:20:04: Arguments: ()
+2026-04-19 13:20:04: --- Logging error ---
+2026-04-19 13:20:04: Traceback (most recent call last):
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 13:20:04:     stream.write(msg + self.terminator)
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 13:20:04:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 13:20:04: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f527' in position 58: character maps to <undefined>
+2026-04-19 13:20:04: Call stack:
+2026-04-19 13:20:04:   File "D:\image_bot\main.py", line 106, in <module>
+2026-04-19 13:20:04:     main()
+2026-04-19 13:20:04:   File "D:\image_bot\main.py", line 98, in main
+2026-04-19 13:20:04:     asyncio.run(run_bot())
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 13:20:04:     return loop.run_until_complete(main)
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 13:20:04:     self.run_forever()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 13:20:04:     super().run_forever()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 13:20:04:     self._run_once()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 13:20:04:     handle._run()
+2026-04-19 13:20:04:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 13:20:04:     self._context.run(self._callback, *self._args)
+2026-04-19 13:20:04:   File "D:\image_bot\services\queue_manager.py", line 75, in _worker_loop
+2026-04-19 13:20:04:     logger.info("\U0001f527 ������ ������� �������")
+2026-04-19 13:20:04: Message: '\U0001f527 ������ ������� �������'
+2026-04-19 13:20:04: Arguments: ()
+2026-04-19 13:20:11: --- Logging error ---
+2026-04-19 13:20:11: Traceback (most recent call last):
+2026-04-19 13:20:11:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 13:20:11:     stream.write(msg + self.terminator)
+2026-04-19 13:20:11:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 13:20:11:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 13:20:11: UnicodeEncodeError: 'charmap' codec can't encode characters in position 44-45: character maps to <undefined>
+2026-04-19 13:20:11: Call stack:
+2026-04-19 13:20:11:   File "D:\image_bot\main.py", line 106, in <module>
+2026-04-19 13:20:11:     main()
+2026-04-19 13:20:11:   File "D:\image_bot\main.py", line 95, in main
+2026-04-19 13:20:11:     init_db()
+2026-04-19 13:20:11:   File "D:\image_bot\database.py", line 84, in init_db
+2026-04-19 13:20:11:     logger.info(f"\U0001f5c4\ufe0f �� ����������������: {DB_PATH}")
+2026-04-19 13:20:11: Message: '\U0001f5c4\ufe0f �� ����������������: D:\\image_bot\\bot_data.db'
+2026-04-19 13:20:11: Arguments: ()
+2026-04-19 13:20:12: --- Logging error ---
+2026-04-19 13:20:12: Traceback (most recent call last):
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 13:20:12:     stream.write(msg + self.terminator)
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 13:20:12:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 13:20:12: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f916' in position 44: character maps to <undefined>
+2026-04-19 13:20:12: Call stack:
+2026-04-19 13:20:12:   File "D:\image_bot\main.py", line 106, in <module>
+2026-04-19 13:20:12:     main()
+2026-04-19 13:20:12:   File "D:\image_bot\main.py", line 98, in main
+2026-04-19 13:20:12:     asyncio.run(run_bot())
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 13:20:12:     return loop.run_until_complete(main)
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 13:20:12:     self.run_forever()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 13:20:12:     super().run_forever()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 13:20:12:     self._run_once()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 13:20:12:     handle._run()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 13:20:12:     self._context.run(self._callback, *self._args)
+2026-04-19 13:20:12:   File "D:\image_bot\main.py", line 65, in run_bot
+2026-04-19 13:20:12:     logger.info("\U0001f916 ��� ������� � ����� � ����������!")
+2026-04-19 13:20:12: Message: '\U0001f916 ��� ������� � ����� � ����������!'
+2026-04-19 13:20:12: Arguments: ()
+2026-04-19 13:20:12: --- Logging error ---
+2026-04-19 13:20:12: Traceback (most recent call last):
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\logging\__init__.py", line 1103, in emit
+2026-04-19 13:20:12:     stream.write(msg + self.terminator)
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\encodings\cp1251.py", line 19, in encode
+2026-04-19 13:20:12:     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+2026-04-19 13:20:12: UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f527' in position 58: character maps to <undefined>
+2026-04-19 13:20:12: Call stack:
+2026-04-19 13:20:12:   File "D:\image_bot\main.py", line 106, in <module>
+2026-04-19 13:20:12:     main()
+2026-04-19 13:20:12:   File "D:\image_bot\main.py", line 98, in main
+2026-04-19 13:20:12:     asyncio.run(run_bot())
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\runners.py", line 44, in run
+2026-04-19 13:20:12:     return loop.run_until_complete(main)
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 633, in run_until_complete
+2026-04-19 13:20:12:     self.run_forever()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\windows_events.py", line 321, in run_forever
+2026-04-19 13:20:12:     super().run_forever()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 600, in run_forever
+2026-04-19 13:20:12:     self._run_once()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 1896, in _run_once
+2026-04-19 13:20:12:     handle._run()
+2026-04-19 13:20:12:   File "C:\Users\Tigr\AppData\Local\Programs\Python\Python310\lib\asyncio\events.py", line 80, in _run
+2026-04-19 13:20:12:     self._context.run(self._callback, *self._args)
+2026-04-19 13:20:12:   File "D:\image_bot\services\queue_manager.py", line 75, in _worker_loop
+2026-04-19 13:20:12:     logger.info("\U0001f527 ������ ������� �������")
+2026-04-19 13:20:12: Message: '\U0001f527 ������ ������� �������'
+2026-04-19 13:20:12: Arguments: ()

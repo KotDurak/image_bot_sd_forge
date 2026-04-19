@@ -1,0 +1,6 @@
+2026-04-19 08:55:53: 2026-04-19 08:55:53,263 - services.queue_manager - INFO - ������� ��������� ��������
+2026-04-19 08:55:59: 2026-04-19 08:55:59,432 - services.queue_manager - INFO - ������� ��������� ��������
+2026-04-19 08:57:46: 2026-04-19 08:57:46,923 - services.forge_api - INFO - dev log: payload: {'prompt': 'sweet girl in shorts', 'negative_prompt': 'blurry, lowres, bad anatomy, bad hands, text, watermark', 'steps': 25, 'cfg_scale': 7.0, 'width': 512, 'height': 768, 'sampler_name': 'DPM++ 2M Karras', 'batch_size': 1, 'override_settings': {'sd_model_checkpoint': 'boleromixPony_v233.safetensors [9223ce0e07]'}}
+2026-04-19 09:10:23: 2026-04-19 09:10:23,575 - services.queue_manager - INFO - ������� ��������� ��������
+2026-04-19 13:20:04: 2026-04-19 13:20:04,212 - services.queue_manager - INFO - ������� ��������� ��������
+2026-04-19 13:20:12: 2026-04-19 13:20:12,075 - services.queue_manager - INFO - ������� ��������� ��������

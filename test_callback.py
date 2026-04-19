@@ -1,5 +1,6 @@
 from presets import get_preset_list
 
+
 for name, key in get_preset_list():
     callback_data = f"preset_{key}"
     print(f"Кнопка: {name:20} | callback_data: {callback_data:25} | len: {len(callback_data.encode('utf-8'))} байт")

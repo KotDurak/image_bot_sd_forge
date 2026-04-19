@@ -6,10 +6,6 @@ from peewee import DoesNotExist
 logger = logging.getLogger(__name__)
 init_db()
 
-
-_user_settings: Dict[int, Dict[str, Any]] = {}
-_user_last_request: Dict[int, float] = {}
-
 def get_user_settings(user_id: int) -> Dict[str, Any]:
     with db_session():
         try:
@@ -23,6 +19,18 @@ def get_user_settings(user_id: int) -> Dict[str, Any]:
             UserSettings.create(user_id=user_id)
             return {"model": None, "preset": None}
 
+def get_all_settings():
+    with db_session():
+        try:
+            return UserSettings.select()
+            return {
+                "model": record.model,
+                "preset": record.preset,
+                # можно добавить другие поля при необходимости
+            }
+        except DoesNotExist:
+
+            return []
 
 def update_user_settings(user_id: int, username: str = None, **kwargs):
     with db_session():
@@ -90,3 +98,30 @@ def log_generation_request(
             created_at=datetime.now()
         )
         logger.info(f"📝 Записан запрос user_{user_id}: status={status}")
+
+
+def get_user_settings_unsafe(user_id: int) -> Dict[str, Any]:
+    import traceback
+    logger.info(f"🔍 [DEBUG] Запрос настроек для user_{user_id}")
+
+    try:
+        # Временный обход db_session для диагностики
+        record, created = UserSettings.get_or_create(user_id=int(user_id))
+
+        logger.info(f"🔍 [DEBUG] Запись: id={record.id}, created={created}, preset_raw=[{record.preset!r}]")
+
+        raw_preset = record.preset
+        clean_preset = str(raw_preset).strip() if raw_preset is not None else None
+        if clean_preset and clean_preset.lower() in ("none", "null", ""):
+            clean_preset = None
+
+        return {
+            "model": getattr(record, "model", None),
+            "preset": clean_preset,
+            "last_request_at": getattr(record, "last_request_at", 0),
+            "requests_count": getattr(record, "requests_count", 0)
+        }
+    except Exception as e:
+        logger.error(f"❌ [DEBUG] get_user_settings упала для {user_id}: {e}")
+        traceback.print_exc()  # 👈 Покажет точную строку и тип ошибки
+        return {"model": None, "preset": None}
