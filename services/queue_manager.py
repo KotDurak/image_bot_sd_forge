@@ -146,8 +146,6 @@ class GenerationQueue:
                 await message.reply_photo(
                     photo=image_bytes,
                     caption=caption,
-                    parse_mode="Markdown",
-                    # 👇 Явный таймаут для отправки (меньше дефолтного)
                     api_kwargs={"read_timeout": 30}
                 )
                 return  # Успех — выходим
