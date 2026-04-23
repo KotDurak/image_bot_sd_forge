@@ -1,6 +1,6 @@
 import datetime
 
-from peewee import (Model, SqliteDatabase, CharField,
+from peewee import (Model, SqliteDatabase, CharField, AutoField,
                     IntegerField, DateTimeField, TextField, FloatField, OperationalError, BooleanField, BigIntegerField)
 import os
 
@@ -25,7 +25,8 @@ class BaseModel(Model):
 
 class UserPreset(BaseModel):
     """Кастомные пресеты пользователей"""
-    user_id = BigIntegerField(primary_key=True)
+    id = AutoField(),
+    user_id = BigIntegerField(index=True)
 
     # Идентификатор для команд и callback
     preset_key = CharField(max_length=50)
