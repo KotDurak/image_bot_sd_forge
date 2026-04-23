@@ -190,7 +190,7 @@ async def handle_wizard_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "Шаг 4/7: <b>Негативный промпт</b> (опционально):\n↩️ <code>skip</code> — пропустить", parse_mode="HTML")
 
     elif step == STEP_NEGATIVE:
-        state["data"]["negative_suffix"] = "" if text.lower() == "skip" else f", {text}"
+        state["data"]["negative_suffix"] = "" if text.lower() == "skip" else text
         state["step"] = STEP_RESOLUTION
 
         kb = [
@@ -198,6 +198,10 @@ async def handle_wizard_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
              InlineKeyboardButton("768x512 🌆", callback_data="preset_res:768x512")],
             [InlineKeyboardButton("512x512", callback_data="preset_res:512x512"),
              InlineKeyboardButton("768x768", callback_data="preset_res:768x768")],
+            [InlineKeyboardButton('1024x1024', callback_data="preset_res:1024x1024"),
+             InlineKeyboardButton('832x1216', callback_data="preset_res:832x1216")],
+            [InlineKeyboardButton('1216x832', callback_data="preset_res:1216x832"),
+             InlineKeyboardButton('1344x768', callback_data="preset_res:1344x768")],
             [InlineKeyboardButton("⬅️ Назад", callback_data="preset_step_back")]
         ]
         await update.message.reply_text("Шаг 5/7: Выберите <b>разрешение</b>:", reply_markup=InlineKeyboardMarkup(kb),
