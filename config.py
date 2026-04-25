@@ -1,5 +1,7 @@
 import os
 from dotenv import load_dotenv
+from pathlib import Path
+
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
@@ -52,3 +54,9 @@ PRESETS = {
         "width": 512, "height": 768, "steps": 28
     },
 }
+
+DB_LAYER = "aiosqlite"  # "peewee" | "aiosqlite" | "both" (для тестов)
+# Абсолютный путь к корню проекта (где лежит этот файл)
+# Абсолютный путь к корню проекта (где лежит этот файл)
+PROJECT_ROOT = Path(__file__).resolve().parent
+DB_PATH = str(PROJECT_ROOT / "bot_data.db")

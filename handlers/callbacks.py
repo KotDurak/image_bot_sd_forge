@@ -1,6 +1,6 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CallbackContext
+from telegram.ext import ContextTypes
 from services.forge_api import fetch_available_models
 from models.user_state import get_user_settings, update_user_settings
 from presets import get_preset_list
@@ -19,7 +19,7 @@ async def select_model_callback(update: Update, context: ContextTypes.DEFAULT_TY
         models = fetch_available_models()
         for display_name, full_name in models:
             if display_name == model_title:
-                update_user_settings(user_id, query.from_user.username, model=full_name)
+                await update_user_settings(user_id, query.from_user.username, model=full_name)
                 await query.edit_message_text(
                     f"✅ Выбрана модель:\n`{full_name.split('/')[-1]}`\n\n"
                     "Теперь используй /gen для генерации.",
@@ -57,7 +57,7 @@ async def apply_preset_callback(update: Update, context: ContextTypes.DEFAULT_TY
     preset_key = query.data.replace("preset_", "")
     preset_config = config.PRESETS.get(preset_key, {})
     preset_name = preset_config.get("name", preset_key)
-    update_user_settings(query.from_user.id, query.from_user.username, preset=preset_key)
+    await update_user_settings(query.from_user.id, query.from_user.username, preset=preset_key)
     await query.edit_message_text(
         f"✅ Применён пресет: **{preset_name}**\n\n"
         "Теперь напиши промпт после /gen — пресет автоматически добавит нужные детали!",
@@ -71,12 +71,12 @@ async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     user_id = query.from_user.id
-    settings = get_user_settings(user_id)
+    settings = await get_user_settings(user_id)
     width, height = config.DEFAULTS['width'], config.DEFAULTS['height']
     current_model = settings.get("model")
     current_preset = settings.get("preset")
     steps = config.DEFAULTS['cfg_scale']
-    user_preset = get_user_preset(user_id, current_preset)
+    user_preset = await get_user_preset(user_id, current_preset)
 
     # Красивые названия для отображения
     model_display = current_model.split('/')[-1] if current_model else "по умолчанию"

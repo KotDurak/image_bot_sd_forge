@@ -5,7 +5,7 @@ import telegram
 import logging
 
 from models.users_presets import add_user_preset, list_user_presets, get_user_preset
-from models.user_state import update_user_settings, get_user_settings
+from models.user_state  import update_user_settings, get_user_settings
 from config import PRESETS
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Активация пресета (системного или кастомного)
     if data.startswith("preset_activate:"):
         key = data.split(":", 1)[1]
-        update_user_settings(user_id, preset=key)
+        await update_user_settings(user_id, preset=key)
         await _show_presets_menu(update, context)  # Обновит список, ошибка "not modified" поймается внутри
         return
 
@@ -45,11 +45,12 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from models.users_presets import delete_user_preset
 
         # Если удаляем активный пресет — сбрасываем настройку
-        current = get_user_settings(user_id).get('preset')
+        settings = await get_user_settings(user_id)
+        current = settings.get('preset')
         if current == key:
-            update_user_settings(user_id, preset=None)
+            await update_user_settings(user_id, preset=None)
 
-        delete_user_preset(user_id, key)  # Логирует внутри
+        await delete_user_preset(user_id, key)  # Логирует внутри
         await _show_presets_menu(update, context)  # Обновляем список
         return
 
@@ -112,8 +113,9 @@ async def _show_presets_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
     """Показывает список пресетов + кнопку создания"""
     query = update.callback_query
     user_id = update.effective_user.id
-    current = get_user_settings(user_id).get('preset')
-    custom_presets = list_user_presets(user_id)
+    settings = await get_user_settings(user_id)
+    current = settings.get('preset')
+    custom_presets = await list_user_presets(user_id)
 
     kb = []
     # 1. Системные пресеты (из config.PRESETS)
@@ -175,7 +177,7 @@ async def handle_wizard_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if not key or not all(c.isalnum() or c == '_' for c in key):
             await update.message.reply_text("❌ Только латиница, цифры, _.")
             return
-        if get_user_preset(user_id, key):
+        if await get_user_preset(user_id, key):
             await update.message.reply_text("❌ Ключ уже занят.")
             return
         state["data"]["preset_key"] = key
@@ -221,14 +223,14 @@ async def _show_confirmation(message, user_id: int):
 
 async def _save_and_activate(query, user_id: int):
     d = _wizard_state[user_id]["data"]
-    success = add_user_preset(
+    success = await add_user_preset(
         user_id=user_id, preset_key=d["preset_key"], name=d["name"],
         prompt_suffix=d.get("prompt_suffix", ""), negative_suffix=d.get("negative_suffix", ""),
         width=d["width"], height=d["height"], steps=d["steps"],
         is_safe_for_business=True
     )
     if success:
-        update_user_settings(user_id, preset=d["preset_key"])
+        await update_user_settings(user_id, preset=d["preset_key"])
         await query.edit_message_text(f"✨ Пресет <b>{d['name']}</b> сохранён и активирован!", parse_mode="HTML")
     else:
         await query.edit_message_text("❌ Ошибка (ключ уже занят).", parse_mode="HTML")

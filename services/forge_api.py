@@ -4,6 +4,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import time
 import config
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -65,3 +66,27 @@ def call_forge_api(payload: dict) -> bytes | None:
     except Exception as e:
         logger.error(f"❌ API error: {e}")
         return None
+
+
+async def switch_forge_model(model_checkpoint: str) -> bool:
+    """
+    Переключает модель в Forge API.
+    Возвращает True при успехе.
+
+    Args:
+        model_checkpoint: полное имя с хэшем, например:
+                         'boleromixPony_v233.safetensors [9223ce0e07]'
+    """
+    try:
+        response = await asyncio.to_thread(
+            requests.post,
+            f"{config.FORGE_URL}/sdapi/v1/options",
+            json={"sd_model_checkpoint": model_checkpoint},
+            timeout=30
+        )
+        response.raise_for_status()
+        logger.debug(f"🔄 Forge принял команду смены модели: {model_checkpoint}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Не удалось переключить модель: {e}")
+        return False

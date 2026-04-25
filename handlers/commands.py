@@ -1,3 +1,4 @@
+# handlers/commands.py
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    update_user_settings(user_id, update.effective_user.first_name, model=None, preset=None)
+    await update_user_settings(user_id, update.effective_user.first_name, model=None, preset=None)
 
     keyboard = [
         [InlineKeyboardButton('🎨 Выбрать модель', callback_data="select_model")],
@@ -39,24 +40,20 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
     user_id = update.effective_user.id
     from models.user_quota import check_generation_limit, increment_usage
 
-    allowed, reason = check_generation_limit(user_id)
+    # 🔥 ФИКС: добавили await
+    allowed, reason = await check_generation_limit(user_id)
 
     if not allowed:
         await update.message.reply_text(reason)
         return
 
-    #TODO Настроить более адекватную проверку на доступы (через бд)
-    ''' if user_id not in config.ALLOWED_USERS:
-        await update.message.reply_text("🔒 Доступ только для своих. Обратись к админу.")
-        return 
-    '''
     prompt = " ".join(context.args) if context.args else update.message.text.replace("/gen", "").strip()
 
     if not prompt:
         await update.message.reply_text("❌ Укажи промпт после /gen. Пример: `/gen cyberpunk city, neon`")
         return
 
-    settings = get_user_settings(user_id)
+    settings = await get_user_settings(user_id)
     model_name = settings.get("model")
     preset_key = settings.get("preset")
 
@@ -72,7 +69,6 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
     }
 
     if preset_key and preset_key in config.PRESETS:
-        # Системный пресет
         cfg = config.PRESETS[preset_key]
         prompt_suffix = cfg.get("prompt_suffix", "")
         negative_suffix = cfg.get("negative_suffix", "")
@@ -81,9 +77,8 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
         payload["steps"] = cfg.get("steps", 20)
         logger.info(f"🎨 Системный пресет: {preset_key}")
     elif preset_key:
-        # Кастомный пресет из БД
         from models.users_presets import get_user_preset
-        custom = get_user_preset(user_id, preset_key)
+        custom = await get_user_preset(user_id, preset_key)
         if custom:
             prompt_suffix = custom.get("prompt_suffix", "")
             negative_suffix = custom.get("negative_suffix", "")
@@ -111,14 +106,14 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
         progress_msg=progress_msg,
         callback=call_forge_api
     )
-
     await queue_manager.add_request(queue_item)
-    increment_usage(user_id)
+
+    # 🔥 Тут уже есть await — ок ✅
+    await increment_usage(user_id)
 
 
 async def preset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик текстовой команды /preset"""
-    """/preset — меню управления пресетами"""
     keyboard = [
         [
             InlineKeyboardButton("📋 Мои пресеты", callback_data="presets_list"),
@@ -160,17 +155,16 @@ async def model_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /settings — показывает текущие настройки"""
     user_id = update.effective_user.id
-    settings = get_user_settings(int(user_id))
-    print(settings)
+    settings = await get_user_settings(int(user_id))
+
     current_model = settings.get("model")
     current_preset = settings.get("preset")
 
     steps = config.DEFAULTS['cfg_scale']
     width, height = config.DEFAULTS['width'], config.DEFAULTS['height']
-    user_preset =  get_user_preset(user_id, current_preset) if current_preset else None
-    # Получаем красивые названия
-    model_display = current_model.split('/')[-1] if current_model else "по умолчанию"
+    user_preset = await get_user_preset(user_id, current_preset) if current_preset else None
 
+    model_display = current_model.split('/')[-1] if current_model else "по умолчанию"
 
     preset_display = "не выбран"
     if current_preset and current_preset in config.PRESETS:
@@ -178,7 +172,7 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif user_preset:
         preset_display = user_preset.get('name')
         steps = user_preset.get('steps')
-        width,height = user_preset.get('width'), user_preset.get('height')
+        width, height = user_preset.get('width'), user_preset.get('height')
 
     text = (
         "⚙️ **Ваши текущие настройки**:\n\n"

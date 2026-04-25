@@ -1,127 +1,75 @@
-from typing import Dict, Any
+from datetime import datetime
+from db.async_core import async_db
 import logging
-from database import UserSettings, init_db, close_db, db_session
-from peewee import DoesNotExist
 
 logger = logging.getLogger(__name__)
-init_db()
-
-def get_user_settings(user_id: int) -> Dict[str, Any]:
-    with db_session():
-        try:
-            record = UserSettings.get(UserSettings.user_id == user_id)
-            return {
-                "model": record.model,
-                "preset": record.preset,
-                # можно добавить другие поля при необходимости
-            }
-        except DoesNotExist:
-            UserSettings.create(user_id=user_id)
-            return {"model": None, "preset": None}
-
-def get_all_settings():
-    with db_session():
-        try:
-            return UserSettings.select()
-            return {
-                "model": record.model,
-                "preset": record.preset,
-                # можно добавить другие поля при необходимости
-            }
-        except DoesNotExist:
-
-            return []
-
-def update_user_settings(user_id: int, username: str = None, **kwargs):
-    with db_session():
-        record, created = UserSettings.get_or_create(user_id=user_id)
-
-        if username and not record.username:
-            record.username = username
-
-        for key, value in kwargs.items():
-            if hasattr(record, key):
-                setattr(record, key, value)
-        record.save()
-        logger.debug(f"💾 Сохранены настройки user_{user_id}: {kwargs}")
-
-def get_last_request_time(user_id: int) -> float:
-    with db_session():
-        try:
-            record = UserSettings.get(UserSettings.user_id == user_id)
-            if record.last_request_at:
-                return record.last_request_at.timestamp()
-        except DoesNotExist:
-            pass
-        return 0
 
 
-def update_last_request_time(user_id: int):
-    with db_session():
-        """Обновляет время последнего запроса"""
-        from datetime import datetime
-        record, _ = UserSettings.get_or_create(user_id=user_id)
-        record.last_request_at = datetime.now()
-        record.save()
+# db/async_user_state.py
 
-def increment_requests_count(user_id: int):
-    with db_session():
-        """Увеличивает счётчик запросов"""
-        record, _ = UserSettings.get_or_create(user_id=user_id)
-        record.requests_count = UserSettings.requests_count + 1
-        record.save()
+async def get_user_settings(user_id: int) -> dict:
+    """Возвращает настройки пользователя"""
+    # Гарантируем существование записи
+    await async_db.conn.execute("""
+        INSERT OR IGNORE INTO user_settings 
+        (user_id, requests_count, created_at, updated_at) 
+        VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    """, (user_id,))
+    await async_db.conn.commit()  # 🔥 Фиксируем INSERT
 
-from database import GenerationRequest
-from datetime import datetime
+    # Читаем настройки
+    cursor = await async_db.conn.execute(
+        "SELECT model, preset, requests_count FROM user_settings WHERE user_id = ?",
+        (user_id,)
+    )
+    row = await cursor.fetchone()
 
-def log_generation_request(
-    user_id: int,
-    prompt: str,
-    model: str = None,
-    preset: str = None,
-    status: str = 'pending',
-    error: str = None,
-    queue_pos: int = None,
-    gen_time: float = None
-):
-    with db_session():
-        """Записывает факт генерации в историю"""
-        GenerationRequest.create(
-            user=str(user_id),
-            prompt=prompt,
-            model_used=model,
-            preset_used=preset,
-            status=status,
-            error_message=error,
-            queue_position=queue_pos,
-            generation_time_sec=gen_time,
-            created_at=datetime.now()
-        )
-        logger.info(f"📝 Записан запрос user_{user_id}: status={status}")
+    if not row:
+        return {"model": None, "preset": None, "requests_count": 0}
+
+    return {
+        "model": row[0],
+        "preset": row[1],
+        "requests_count": row[2]
+    }
 
 
-def get_user_settings_unsafe(user_id: int) -> Dict[str, Any]:
-    import traceback
-    logger.info(f"🔍 [DEBUG] Запрос настроек для user_{user_id}")
+async def update_user_settings(user_id: int, username: str = None, **kwargs):
+    """Обновить настройки пользователя"""
+    # Гарантируем наличие записи
+    await async_db.conn.execute("""
+            INSERT OR IGNORE INTO user_settings 
+            (user_id, requests_count, created_at, updated_at)
+            VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """, (user_id,))
+    await async_db.conn.commit()
 
-    try:
-        # Временный обход db_session для диагностики
-        record, created = UserSettings.get_or_create(user_id=int(user_id))
+    # Собираем SET-клаузу
+    valid_fields = {
+        'username', 'model', 'preset', 'requests_count',
+        'last_request_at', 'created_at', 'updated_at'
+    }
+    updates = []
+    params = []
 
-        logger.info(f"🔍 [DEBUG] Запись: id={record.id}, created={created}, preset_raw=[{record.preset!r}]")
+    if username is not None:
+        updates.append("username = ?")
+        params.append(username)
 
-        raw_preset = record.preset
-        clean_preset = str(raw_preset).strip() if raw_preset is not None else None
-        if clean_preset and clean_preset.lower() in ("none", "null", ""):
-            clean_preset = None
+    for key, value in kwargs.items():
+        if key in valid_fields:
+            updates.append(f"{key} = ?")
+            params.append(value)
 
-        return {
-            "model": getattr(record, "model", None),
-            "preset": clean_preset,
-            "last_request_at": getattr(record, "last_request_at", 0),
-            "requests_count": getattr(record, "requests_count", 0)
-        }
-    except Exception as e:
-        logger.error(f"❌ [DEBUG] get_user_settings упала для {user_id}: {e}")
-        traceback.print_exc()  # 👈 Покажет точную строку и тип ошибки
-        return {"model": None, "preset": None}
+    if updates:
+        updates.append("updated_at = CURRENT_TIMESTAMP")
+        params.append(user_id)  # для WHERE
+
+        query = f"""
+            UPDATE user_settings 
+            SET {', '.join(updates)}
+            WHERE user_id = ?
+        """
+        await async_db.conn.execute(query, tuple(params))
+        await async_db.conn.commit()
+        logger.debug(f"💾 [async] Обновлены настройки user_{user_id}: {kwargs}")

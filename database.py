@@ -8,7 +8,7 @@ from db.user_preset import UserPreset
 from db.user_quota import UserQuota
 
 logger = logging.getLogger(__name__)
-DB_PATH = os.path.join(os.path.dirname(__file__), 'bot_data.db')
+from config import DB_PATH
 
 db = SqliteDatabase(
     DB_PATH,
@@ -66,12 +66,12 @@ class GenerationRequest(BaseModel):
     created_at = DateTimeField(default=datetime.now)
 
 
-class Meta:
-    table_name = 'generation_requests'
-    indexes = (
-        (('user', 'created_at'), False),
-        (('status',), False),
-    )
+    class Meta:
+        table_name = 'generation_requests'
+        indexes = (
+            (('user', 'created_at'), False),
+            (('status',), False),
+        )
 
 def init_db():
     """Создаёт таблицы если их нет"""
