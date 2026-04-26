@@ -224,11 +224,7 @@ async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"   🕐 {item['created_at'][:16]}\n\n"
         )
 
-    # Кнопка "Очистить историю" (опционально, для админов или позже)
-    keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data="history_refresh")]]
-
     await update.message.reply_text(
         text,
         parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
     )
