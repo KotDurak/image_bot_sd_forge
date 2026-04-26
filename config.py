@@ -10,6 +10,7 @@ load_dotenv()
 # 🔑 Telegram & API
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
+ADMINS = [ADMIN_USER_ID]
 
 # 🎨 Stable Diffusion Forge
 FORGE_URL = os.getenv("FORGE_URL", "http://localhost:7860")
@@ -31,8 +32,9 @@ DEFAULTS = {
     "cfg_scale": 7.0,
     "width": 512,
     "height": 768,
-    "sampler": "DPM++ 2M Karras",
     "negative_prompt": "blurry, lowres, bad anatomy, bad hands, text, watermark",
+    "sampler_name": "Euler",
+    "scheduler": "Automatic",
 }
 
 # 🖼 Модели
@@ -64,6 +66,32 @@ PRESETS = {
     },
 }
 
+SAMPLERS = {
+    "Euler ⚡": "Euler",
+    "Euler a 🌊": "Euler a",
+    "LMS 🧮": "LMS",
+    "Heun 🧪": "Heun",
+    "DPM2 🎲": "DPM2",
+    "DPM2 a 🎲": "DPM2 a",
+    "DPM++ 2S a ⚡": "DPM++ 2S a",
+    "DPM++ 2M 🎯": "DPM++ 2M",
+    "DPM++ SDE 💧": "DPM++ SDE",
+    "DPM++ 2M SDE 🔬": "DPM++ 2M SDE",
+    "DPM++ 3M SDE 🧠": "DPM++ 3M SDE",
+    "UniPC 🚀": "UniPC",
+    "DDIM 📜": "DDIM",
+    "PLMS 📐": "PLMS"
+}
+SCHEDULERS = {
+    "Automatic 🤖": "automatic",
+    "Normal 📉": "normal",
+    "Karras 📈": "karras",
+    "Exponential 🧬": "exponential",
+    "SGM Uniform ⚖️": "sgm_uniform",
+    "Simple ⚡": "simple",
+    "DDIM Uniform 📏": "ddim_uniform"
+}
+
 # 🗄 База данных
 DB_LAYER = "aiosqlite"
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -72,3 +100,11 @@ DB_PATH = str(PROJECT_ROOT / "bot_data.db")
 # 📁 Пути
 LOGS_DIR = PROJECT_ROOT / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
+
+# 📢 Настройки рекламы
+ADS_ENABLED = os.getenv("ADS_ENABLED", "true").lower() == "true"
+ADS_FOR_FREE_ONLY = os.getenv("ADS_FOR_FREE_ONLY", "false").lower() == "true"  # если true — платным не показываем
+ADS_PAID_CHANCE = float(os.getenv("ADS_PAID_CHANCE", "0.1"))  # 10% шанс показать платному
+
+AD_REPORT_ANONYMIZE = os.getenv("AD_REPORT_ANONYMIZE", "true").lower() == "true"
+AD_REPORT_SALT = os.getenv("AD_REPORT_SALT", "change_me_in_prod")  # Соль для хеширования

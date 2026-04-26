@@ -1,20 +1,38 @@
 # services/queue_manager.py
+"""
+🔄 Асинхронная очередь генерации с умным батчингом по моделям.
+Принцип: минимизировать переключения моделей в VRAM, максимизировать пропускную способность.
+"""
 import asyncio
 import logging
+import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional, Callable, Awaitable, Dict, List
-from collections import defaultdict
-from models.generation_log import log_generation
-import time
-from utils.tg_helpers import send_image_with_actions
 
-import httpx
 from telegram import Message
 
-from services.forge_api import  switch_forge_model
+from models.generation_log import log_generation
+from services.forge_api import switch_forge_model
+from utils.tg_helpers import send_image_with_actions
 
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# === КОНСТАНТЫ ==============================================================
+# =============================================================================
+
+QUEUE_POLL_INTERVAL = 0.1  # Секунд между проверками пустой очереди
+MAX_BATCH_SIZE = 4  # Макс. запросов в одной пачке
+MODEL_SWITCH_TIMEOUT = 45  # Таймаут переключения модели в Forge (сек)
+GENERATION_TIMEOUT = 120  # Таймаут на саму генерацию (сек)
+MAX_STATS_ENTRIES = 100  # Лимит уникальных моделей в статистике
+STATS_PRUNE_COUNT = 10  # Сколько наименее популярных удалять при переполнении
+
+
+# =============================================================================
+# === МОДЕЛИ ДАННЫХ ==========================================================
+# =============================================================================
 
 @dataclass
 class QueueItem:
@@ -27,17 +45,22 @@ class QueueItem:
     callback: Callable[[dict], Awaitable[bytes]]
     created_at: float = field(default_factory=lambda: asyncio.get_event_loop().time())
     usage_type: str = "free"
-    preset_used: str | None = None
+    preset_used: Optional[str] = None
+    show_ads: bool = False
 
     @property
     def model_key(self) -> Optional[str]:
-        """Извлекает ключ модели из payload (для группировки)"""
+        """Извлекает ключ модели из payload (для группировки по модели в VRAM)"""
+        override = self.payload.get("override_settings", {})
         return (
-                self.payload.get("override_settings", {})
-                .get("sd_model_checkpoint")
+                override.get("sd_model_checkpoint")
                 or self.payload.get("model_name")
         )
 
+
+# =============================================================================
+# === ОСНОВНОЙ КЛАСС ОЧЕРЕДИ =================================================
+# =============================================================================
 
 class GenerationQueue:
     """
@@ -50,27 +73,21 @@ class GenerationQueue:
     4. Обрабатывает пачку, затем повторяет
     """
 
-    # ⏱ Настройки поведения
-    MAX_BATCH_SIZE = 4  # Макс. запросов в одной пачке (чтобы не блокировать других)
-    MODEL_SWITCH_TIMEOUT = 45  # Таймаут на переключение модели в Forge (сек)
-    GENERATION_TIMEOUT = 120  # Таймаут на саму генерацию (сек)
-
-    def __init__(self):
+    def __init__(self) -> None:
         self._queue: asyncio.Queue[QueueItem] = asyncio.Queue()
         self._worker_task: Optional[asyncio.Task] = None
         self._running = False
 
         # 🧠 Состояние воркера
-        self._current_model: Optional[str] = None  # Какая модель сейчас в VRAM
+        self._current_model: Optional[str] = None
         self._stats: Dict[str, int] = defaultdict(int)
-        self._MAX_STATS_ENTRIES = 100  # Лимит уникальных моделей в статистике
         self._shutdown_event = asyncio.Event()
 
     # ─────────────────────────────────────────────────────────────
     # Публичный API
     # ─────────────────────────────────────────────────────────────
 
-    async def start(self):
+    async def start(self) -> None:
         """Запускает воркер очереди"""
         if self._running:
             return
@@ -78,14 +95,13 @@ class GenerationQueue:
         self._worker_task = asyncio.create_task(self._worker_loop(), name="queue_worker")
         logger.info("🚀 Очередь генерации запущена")
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Останавливает воркер (ждёт завершения текущей задачи)"""
         logger.info("🛑 Остановка очереди...")
         self._running = False
         self._shutdown_event.set()
 
         if self._worker_task and not self._worker_task.done():
-            # Даём 5 сек на завершение текущей генерации
             try:
                 await asyncio.wait_for(self._worker_task, timeout=5.0)
             except asyncio.TimeoutError:
@@ -99,22 +115,12 @@ class GenerationQueue:
     async def add_request(self, item: QueueItem) -> bool:
         """Добавляет запрос в очередь и обновляет статус пользователя"""
         position = self._queue.qsize() + 1
-
-        # Обновляем статус в Телеграме
         await self._update_progress(item, position)
-
-        # Добавляем в очередь
         await self._queue.put(item)
 
-        # Считаем статистику
         if model := item.model_key:
             self._stats[model] += 1
-
-        if len(self._stats) > self._MAX_STATS_ENTRIES:
-            # Удаляем 10 наименее популярных
-            least_popular = sorted(self._stats.items(), key=lambda x: x[1])[:10]
-            for key, _ in least_popular:
-                del self._stats[key]
+            self._prune_stats_if_needed()
 
         logger.info(f"📥 user_{item.user_id}: добавлен в очередь (#{position}), модель: {model or 'default'}")
         return True
@@ -123,30 +129,26 @@ class GenerationQueue:
     # Основной цикл воркера
     # ─────────────────────────────────────────────────────────────
 
-    async def _worker_loop(self):
+    async def _worker_loop(self) -> None:
         """Бесконечный цикл обработки очереди с умной группировкой"""
         logger.info("🔧 Воркер очереди запущен")
 
         while self._running:
             try:
-                # 🔥 Если очередь пуста — засыпаем на 0.1с, чтобы не блокировать event loop!
                 if self._queue.empty():
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(QUEUE_POLL_INTERVAL)
                     continue
 
-                # 1️⃣ Формируем пачку запросов
                 batch = await self._collect_batch()
                 if not batch:
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(QUEUE_POLL_INTERVAL)
                     continue
 
-                # 2️⃣ Переключаем модель, если нужно
                 target_model = batch[0].model_key
                 if target_model and target_model != self._current_model:
                     await self._switch_model_safe(target_model)
                     self._current_model = target_model
 
-                # 3️⃣ Обрабатываем пачку последовательно
                 for item in batch:
                     await self._process_item(item)
 
@@ -155,39 +157,29 @@ class GenerationQueue:
                 break
             except Exception as e:
                 logger.error(f"❌ Критическая ошибка в воркере: {e}", exc_info=True)
-                await asyncio.sleep(2)  # Пауза перед повтором
+                await asyncio.sleep(2)
 
     # ─────────────────────────────────────────────────────────────
     # Логика формирования пачки (batching)
     # ─────────────────────────────────────────────────────────────
+
     async def _collect_batch(self) -> List[QueueItem]:
-        """
-        Собирает пачку запросов на одну модель.
-        Асинхронная версия без гонок условий.
-        """
-        # 🔥 Если очередь пуста — сразу выходим (не блокируем)
+        """Собирает пачку запросов на одну модель. Асинхронная версия без гонок."""
         if self._queue.empty():
             return []
 
         try:
-            # Берём первый элемент
             first = await self._queue.get()
             batch = [first]
             target_model = first.model_key
 
-            # 🔥 Быстро забираем ещё элементы на ту же модель (если есть)
-            # Без сложных таймаутов — просто проверяем, что есть в очереди
-            while (
-                    not self._queue.empty() and
-                    len(batch) < self.MAX_BATCH_SIZE
-            ):
-                # Смотрим следующий элемент, не извлекая
+            while not self._queue.empty() and len(batch) < MAX_BATCH_SIZE:
                 peek = self._peek_queue()
                 if peek and peek.model_key == target_model:
                     item = await self._queue.get()
                     batch.append(item)
                 else:
-                    break  # Другая модель — не трогаем, пусть ждёт своей очереди
+                    break
 
             logger.debug(f"📦 Batch: {len(batch)} items, model={target_model or 'default'}")
             return batch
@@ -200,24 +192,19 @@ class GenerationQueue:
     # Переключение модели (с защитой от зависаний)
     # ─────────────────────────────────────────────────────────────
 
-    async def _switch_model_safe(self, model_checkpoint: str):
-        """
-        Переключает модель в Forge с таймаутом и проверкой.
-        Вызывается только если target_model != self._current_model
-        """
+    async def _switch_model_safe(self, model_checkpoint: str) -> None:
+        """Переключает модель в Forge с таймаутом и проверкой."""
         logger.info(f"🔄 Переключение модели: {self._current_model} → {model_checkpoint}")
 
         try:
-            # Отправляем команду переключения
             await asyncio.wait_for(
                 switch_forge_model(model_checkpoint),
-                timeout=self.MODEL_SWITCH_TIMEOUT
+                timeout=MODEL_SWITCH_TIMEOUT
             )
             logger.info(f"✅ Модель загружена: {model_checkpoint}")
-
         except asyncio.TimeoutError:
             logger.error(f"⏰ Таймаут переключения модели: {model_checkpoint}")
-            raise RuntimeError(f"Не удалось загрузить модель за {self.MODEL_SWITCH_TIMEOUT}с")
+            raise RuntimeError(f"Не удалось загрузить модель за {MODEL_SWITCH_TIMEOUT}с")
         except Exception as e:
             logger.error(f"❌ Ошибка переключения модели: {e}", exc_info=True)
             raise
@@ -226,21 +213,21 @@ class GenerationQueue:
     # Обработка одного запроса
     # ─────────────────────────────────────────────────────────────
 
-    async def _process_item(self, item: QueueItem):
+    async def _process_item(self, item: QueueItem) -> None:
         """Обрабатывает один элемент очереди: генерация + отправка + возврат при ошибке"""
         user_id = item.user_id
         start_time = time.perf_counter()
-        logger.info(f"🎨 Генерация для user_{user_id}: {item.prompt[:50]}...")
+
+        # 🔥 Извлекаем метаданные ОДИН РАЗ
         model, preset = self._extract_model_and_preset(item)
+        logger.info(f"🎨 Генерация для user_{user_id}: {item.prompt[:50]}...")
 
         try:
-            model, preset = self._extract_model_and_preset(item)
-            # 1️⃣ Генерация с таймаутом
+            # 1️⃣ Генерация с таймаутом (в потоке, чтобы не блокировать asyncio)
             image_bytes = await asyncio.wait_for(
                 asyncio.to_thread(item.callback, item.payload),
-                timeout=self.GENERATION_TIMEOUT
+                timeout=GENERATION_TIMEOUT
             )
-
             gen_time = time.perf_counter() - start_time
 
             if not image_bytes:
@@ -248,104 +235,118 @@ class GenerationQueue:
 
             logger.info(f"✅ user_{user_id}: сгенерировано {len(image_bytes)} байт")
 
-            # Отправка с кнопками действий
+            # 2️⃣ Отправка картинки
             await send_image_with_actions(
                 message=item.message,
                 image_bytes=image_bytes,
                 caption=item.prompt[:100]
             )
 
+            # 3️⃣ Логирование генерации (получаем ID для привязки рекламы)
+            gen_id = None
             try:
-                await log_generation(
+                gen_id = await log_generation(
                     user_id=user_id, prompt=item.prompt, model=model,
                     preset=preset, status="success", gen_time=gen_time
                 )
             except Exception as e:
                 logger.error(f"❌ Не удалось записать лог генерации: {e}", exc_info=True)
+
+            # 4️⃣ Реклама: ТОЛЬКО если есть флаг И успешно записался лог
+            if item.show_ads and gen_id is not None:
+                from services.ad_renderer import show_ad_after_generation
+                asyncio.create_task(show_ad_after_generation(item.message, gen_id=gen_id))
+
             logger.info(f"user_{user_id}: задача выполнена")
 
         except asyncio.TimeoutError:
-            logger.error(f"⏰ user_{user_id}: таймаут генерации ({self.GENERATION_TIMEOUT}с)")
-            gen_time = time.perf_counter() - start_time
-            # 🔥 Возврат при таймауте
-            await self._refund_if_needed(item)
-            try:
-                await log_generation(
-                    user_id=user_id, prompt=item.prompt, status="failed",
-                    error="timeout", gen_time=gen_time
-                )
-            except Exception as log_err:
-                logger.error(f"❌ Не удалось записать лог (таймаут): {log_err}")
-
-            await item.message.reply_text(
-                "😿 Генерация заняла слишком много времени. Кредит возвращён. Попробуй упростить промпт.")
+            logger.error(f"⏰ user_{user_id}: таймаут генерации ({GENERATION_TIMEOUT}с)")
+            await self._handle_generation_error(item, "timeout", time.perf_counter() - start_time)
 
         except Exception as e:
             logger.error(f"❌ user_{user_id}: ошибка генерации: {e}", exc_info=True)
-            # 🔥 Возврат при любой другой ошибке
-            await self._refund_if_needed(item)
-            await item.message.reply_text("😿 Ошибка при генерации. Кредит возвращён. Попробуй позже или напиши /help")
-            try:
-                await log_generation(
-                    user_id=user_id, prompt=item.prompt, status="failed",
-                    error=str(e)[:200]
-                )
-            except Exception as log_err:
-                logger.error(f"❌ Не удалось записать лог (таймаут): {log_err}")
-
+            await self._handle_generation_error(item, str(e)[:200], time.perf_counter() - start_time)
 
         finally:
-            # Всегда отмечаем задачу как выполненную (для task_done)
             self._queue.task_done()
+
+    async def _handle_generation_error(
+            self,
+            item: QueueItem,
+            error: str,
+            gen_time: float
+    ) -> None:
+        """Обрабатывает ошибку генерации: возврат кредита + лог + уведомление"""
+        await self._refund_if_needed(item)
+
+        try:
+            await log_generation(
+                user_id=item.user_id, prompt=item.prompt,
+                status="failed", error=error, gen_time=gen_time
+            )
+        except Exception as log_err:
+            logger.error(f"❌ Не удалось записать лог ошибки: {log_err}")
+
+        await item.message.reply_text(
+            "😿 Ошибка при генерации. Кредит возвращён. Попробуй позже или напиши /help"
+            if error != "timeout" else
+            "😿 Генерация заняла слишком много времени. Кредит возвращён. Попробуй упростить промпт."
+        )
 
     # ─────────────────────────────────────────────────────────────
     # Вспомогательные методы
     # ─────────────────────────────────────────────────────────────
 
-    async def _update_progress(self, item: QueueItem, position: int):
+    async def _update_progress(self, item: QueueItem, position: int) -> None:
         """Обновляет сообщение о прогрессе у пользователя"""
         text = (
-            f"⏳ Ты в очереди: #{position}\n"
-            f"🎨 Запрос: `{item.prompt[:50]}...`"
-        ) if position > 1 else "🎨 Генерирую..."
-
+            f"⏳ Ты в очереди: #{position}\n🎨 Запрос: `{item.prompt[:50]}...`"
+            if position > 1 else "🎨 Генерирую..."
+        )
         try:
             await item.progress_msg.edit_text(text)
         except Exception as e:
             if "message is not modified" not in str(e).lower():
                 logger.debug(f"⚠️ Не удалось обновить прогресс: {e}")
 
-
-    async def _refund_if_needed(self, item: QueueItem):
+    async def _refund_if_needed(self, item: QueueItem) -> None:
         """Возвращает кредит, если он был списан (вызывается только при ошибке)"""
-        # Безлимитным ничего не возвращаем — они не тратили
         from models.user_quota import is_unlimited_user, refund_credit
 
         if await is_unlimited_user(item.user_id):
             return
 
-        # Возвращаем кредит того типа, который был списан
         await refund_credit(item.user_id, item.usage_type)
         logger.info(f"💸 Возврат кредита ({item.usage_type}) для user_{item.user_id}")
 
-    def _extract_model_and_preset(self, item: QueueItem) -> tuple[str | None, str | None]:
-        """
-        Извлекает модель и пресет из QueueItem для логирования.
-        Возвращает (model_name, preset_name)
-        """
-        # 1. Модель: ищем в override_settings или на верхнем уровне
-        model = (
-                item.payload.get("override_settings", {}).get("sd_model_checkpoint")
-                or item.payload.get("model_name")
-        )
-        # Очищаем от хэша для читаемости: "file.safetensors [abc123]" → "file.safetensors"
+    def _extract_model_and_preset(self, item: QueueItem) -> tuple[Optional[str], Optional[str]]:
+        """Извлекает модель и пресет из QueueItem для логирования."""
+        override = item.payload.get("override_settings", {})
+        model = override.get("sd_model_checkpoint") or item.payload.get("model_name")
+
         if model and " [" in model:
             model = model.split(" [")[0]
 
-        # 2. Пресет: передаём явно при создании QueueItem (см. ниже)
         preset = getattr(item, "preset_used", None)
-
         return model, preset
+
+    def _prune_stats_if_needed(self) -> None:
+        """Удаляет наименее популярные модели из статистики, если превышен лимит"""
+        if len(self._stats) <= MAX_STATS_ENTRIES:
+            return
+
+        least_popular = sorted(self._stats.items(), key=lambda x: x[1])[:STATS_PRUNE_COUNT]
+        for key, _ in least_popular:
+            del self._stats[key]
+
+    def _peek_queue(self) -> Optional[QueueItem]:
+        """Безопасный пик в очередь (через приватный атрибут, но изолированно)"""
+        try:
+            # ⚠️ Доступ к _queue._queue — хрупкий, но необходимый для peek без извлечения
+            # Если asyncio.Queue изменит реализацию, этот метод потребует обновления
+            return self._queue._queue[0] if self._queue._queue else None
+        except (IndexError, AttributeError):
+            return None
 
     # ─────────────────────────────────────────────────────────────
     # Свойства и отладка
@@ -362,19 +363,13 @@ class GenerationQueue:
 
     async def get_queue_snapshot(self) -> List[Dict]:
         """Для отладки: возвращает список ожидающих запросов"""
-        items = []
-        for item in list(self._queue._queue):
-            items.append({
+        now = asyncio.get_event_loop().time()
+        return [
+            {
                 "user_id": item.user_id,
                 "model": item.model_key,
                 "prompt": item.prompt[:30] + "...",
-                "waiting_sec": asyncio.get_event_loop().time() - item.created_at
-            })
-        return items
-
-    def _peek_queue(self) -> Optional[QueueItem]:
-        """Безопасный пик в очередь (через приватный атрибут, но изолированно)"""
-        try:
-            return self._queue._queue[0] if self._queue._queue else None
-        except (IndexError, AttributeError):
-            return None
+                "waiting_sec": now - item.created_at
+            }
+            for item in list(self._queue._queue)
+        ]

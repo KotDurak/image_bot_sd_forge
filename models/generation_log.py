@@ -17,7 +17,7 @@ async def log_generation(
         Запись в историю генераций.
         Адаптировано под твою схему: user (VARCHAR), queue_position (INT), etc.
         """
-    await async_db.conn.execute("""
+    cursor = await async_db.conn.execute("""
             INSERT INTO generation_requests 
             (user, prompt, model_used, preset_used, status, error_message, 
              queue_position, generation_time_sec, created_at)
@@ -33,7 +33,9 @@ async def log_generation(
         round(gen_time, 2) if gen_time else None  # generation_time_sec
     ))
     await async_db.conn.commit()
+
     logger.debug(f"📝 Лог генерации: user_{user_id} | {status} | {gen_time or 0:.2f}с")
+    return cursor.lastrowid
 
 
 async def get_user_history(user_id: int, limit: int = 10) -> list[dict]:

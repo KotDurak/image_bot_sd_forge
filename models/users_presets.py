@@ -15,8 +15,10 @@ async def add_user_preset(
         width: int = 512,
         height: int = 768,
         steps: int = 25,
-        is_safe_for_business: bool = True,
-        is_premium: bool = False
+        is_premium: bool = False,
+        cfg_scale = 7.0,
+        sampler = 'Euler',
+        scheduler= 'Automatic'
 ) -> bool:
     """
     Добавляет кастомный пресет пользователя.
@@ -28,10 +30,10 @@ async def add_user_preset(
         await async_db.conn.execute(
             """INSERT INTO user_preset 
                (user_id, preset_key, name, prompt_suffix, negative_suffix, 
-                width, height, steps, is_safe_for_business, is_premium) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                width, height, steps,  is_premium, cfg_scale, sampler, scheduler) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (user_id, preset_key, name.strip(), prompt_suffix, negative_suffix,
-             width, height, steps, is_safe_for_business, is_premium)
+             width, height, steps, is_premium, cfg_scale, sampler, scheduler)
         )
         await async_db.conn.commit()
         logger.info(f"✅ Пресет '{preset_key}' создан для user_{user_id}")
@@ -54,7 +56,8 @@ async def get_user_preset(user_id: int, preset_key: str) -> Optional[Dict[str, A
 
     cursor = await async_db.conn.execute(
         """SELECT preset_key, name, prompt_suffix, negative_suffix, 
-                  width, height, steps, is_safe_for_business, is_premium 
+                  width, height, steps, is_safe_for_business, is_premium,
+                  cfg_scale,sampler,scheduler
            FROM user_preset 
            WHERE user_id = ? AND preset_key = ?""",
         (user_id, preset_key)

@@ -2,13 +2,15 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
     PreCheckoutQueryHandler
 from telegram import Update
 from telegram.request import HTTPXRequest
-from handlers import payments, commands, callbacks, presets, admins
+from handlers import payments, commands, callbacks, presets, admins, ad_management
 from db.async_core import async_db
 from services.queue_manager import GenerationQueue
 import config
 import logging
 import asyncio
 from utils.logger import setup_logging
+from services.forge_options import ForgeOptionsCache
+
 setup_logging(config.MODE, logs_dir=config.LOGS_DIR)
 queue_manager = GenerationQueue()
 
@@ -18,10 +20,11 @@ async def post_init(app: Application):
     """Асинхронная инициализация: БД, очередь, логирование"""
     await async_db.init()
     logger.info("🔌 БД подключена (aiosqlite)")
-
     await queue_manager.start()
-    logger.info("🚀 Очередь генерации запущена")
+    ForgeOptionsCache.init(config.FORGE_URL)
+    asyncio.create_task(ForgeOptionsCache.ensure_loaded())
 
+    logger.info("🚀 Очередь генерации запущена")
     logger.info("🤖 Бот запущен и готов к творчеству!")
 
 
@@ -52,9 +55,17 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("settings", commands.settings_command))
     app.add_handler(CommandHandler("history", commands.history_cmd))
 
+    # 📥 Импорт рекламы
+    app.add_handler(CommandHandler("ad_template", ad_management.send_ad_template))
+    app.add_handler(MessageHandler(
+        (filters.Document.FileExtension("csv") | filters.Document.FileExtension("json")) & filters.User(config.ADMINS),
+        ad_management.handle_ad_file
+    ))
+
     app.add_handler(CallbackQueryHandler(callbacks.select_model_callback, pattern="^select_model$|^model_"))
     app.add_handler(CallbackQueryHandler(presets.preset_router, pattern="^preset|^presets"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, presets.handle_wizard_text))
+    app.add_handler(CommandHandler("preset_add", presets.quick_preset_cmd))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Document.ALL, presets.handle_wizard_text))
     app.add_handler(CallbackQueryHandler(callbacks.settings_callback, pattern="^settings$"))
     app.add_handler(CallbackQueryHandler(callbacks.main_menu_callback, pattern="^main_menu$"))
 
@@ -63,6 +74,10 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("ban", admins.ban_cmd))
     app.add_handler(CommandHandler("reset", admins.reset_cmd))
     app.add_handler(CommandHandler('add_credits', admins.debug_add_credits))
+    # 📊 Реклама и отчётность
+    app.add_handler(CommandHandler("ad_report", admins.ad_report_cmd))
+    app.add_handler(CallbackQueryHandler(admins.ad_report_cmd, pattern=r"^ad_page_\d+_\d+$"))
+    app.add_handler(CallbackQueryHandler(admins.ad_csv_callback, pattern="^ad_csv_req_\d+$"))
 
     # 💰 Платежи
     app.add_handler(CommandHandler("buy", payments.buy_credits_cmd))
@@ -74,6 +89,10 @@ def register_handlers(app: Application):
     app.add_handler(PreCheckoutQueryHandler(payments.pre_checkout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, payments.successful_payment_callback))
 
+    app.add_handler(CommandHandler("samplers", presets.list_samplers_cmd))
+    app.add_handler(CommandHandler("schedulers", presets.list_schedulers_cmd))
+    app.add_handler(CommandHandler("refresh_forge", presets.refresh_forge_options_cmd))
+
 
 def main():
     """Точка входа — синхронная, без asyncio.run()"""
@@ -84,7 +103,8 @@ def main():
         .post_init(post_init) \
         .post_shutdown(post_shutdown) \
         .build()
-
+    from handlers.error_handler import global_error_handler
+    app.add_error_handler(global_error_handler)
     register_handlers(app)
 
     try:

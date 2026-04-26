@@ -1,8 +1,5 @@
 from typing import Tuple, Optional
 import logging
-
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
 from db.async_core import async_db
 import config
 
@@ -182,3 +179,10 @@ async def is_unlimited_user(user_id: int) -> bool:
     """Проверяет, есть ли у пользователя безлимит"""
     quota = await _get_or_create_quota(user_id)
     return bool(quota.get("is_unlimited", False))
+
+async def get_user_credits(user_id: int):
+    cursor = await async_db.conn.execute(
+        "SELECT paid_credits - paid_used FROM user_quota WHERE user_id = ?", (user_id,)
+    )
+    row = await cursor.fetchone()
+    return int(row[0])

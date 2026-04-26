@@ -1,0 +1,1 @@
+ALTER TABLE user_preset ADD COLUMN scheduler TEXT DEFAULT 'Automatic'
