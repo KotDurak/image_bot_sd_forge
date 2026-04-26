@@ -1,5 +1,8 @@
 from typing import Tuple, Optional
 import logging
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 from db.async_core import async_db
 import config
 
@@ -38,28 +41,33 @@ async def _get_or_create_quota(user_id: int) -> dict:
 
 async def check_generation_limit(user_id: int) -> Tuple[bool, str]:
     """
-    Проверяет, можно ли пользователю генерировать.
-    Возвращает (allowed: bool, reason: str).
+    Проверяет доступ к генерации.
+    Возвращает (allowed: bool, status: str)
     """
     quota = await _get_or_create_quota(user_id)
 
     # 1. Забанен?
     if quota["is_banned"]:
-        return False, "🚫 Доступ ограничен. Обратись к админу."
+        return False, "banned"
 
     # 2. Безлимит?
     if quota["is_unlimited"]:
         return True, "ok"
 
-    # 3. Лимит исчерпан?
-    if quota["free_used"] >= quota["free_limit"]:
-        return False, f"⚠️ Лимит {quota['free_limit']} бесплатных генераций исчерпан."
+    # 3. Есть бесплатные?
+    if quota["free_used"] < quota["free_limit"]:
+        return True, "free"
 
-    # 4. Всё ок
-    return True, "ok"
+    # 4. Есть платные?
+    paid_available = quota.get("paid_credits", 0) - quota.get("paid_used", 0)
+    if paid_available > 0:
+        return True, "paid"
+
+    # 5. Всё исчерпано
+    return False, "no_credits"
 
 
-async def increment_usage(user_id: int) -> bool:
+async def increment_usage(user_id: int, usage_type: str = "free") -> bool:
     """
     Увеличивает счётчик использования.
     Возвращает True если счётчик обновлён, False если у пользователя безлимит.
@@ -70,20 +78,19 @@ async def increment_usage(user_id: int) -> bool:
     if quota["is_unlimited"]:
         return False
 
-    await async_db.conn.execute(
-        "UPDATE user_quota SET free_used = free_used + 1 WHERE user_id = ?",
-        (user_id,)
-    )
+    if usage_type == "free":
+        await async_db.conn.execute(
+            "UPDATE user_quota SET free_used = free_used + 1 WHERE user_id = ?",
+            (user_id,)
+        )
+    else:  # paid
+        await async_db.conn.execute(
+            "UPDATE user_quota SET paid_used = paid_used + 1 WHERE user_id = ?",
+            (user_id,)
+        )
+
     await async_db.conn.commit()
-
-    # Получаем актуальное значение для лога
-    cursor = await async_db.conn.execute(
-        "SELECT free_used, free_limit FROM user_quota WHERE user_id = ?", (user_id,)
-    )
-    row = await cursor.fetchone()
-    if row:
-        logger.debug(f"📊 user_{user_id}: free_used = {row[0]}/{row[1]}")
-
+    logger.debug(f"📊 user_{user_id}: {usage_type}_used incremented")
     return True
 
 
@@ -135,3 +142,43 @@ async def reset_usage(user_id: int) -> bool:
 
     logger.info(f"🔄 Счётчик сброшен для user_{user_id}")
     return True
+
+
+async def add_paid_credits(user_id: int, user_credits: int) -> bool:
+    """Начисляет платные кредиты пользователю"""
+    await _get_or_create_quota(user_id)  # гарантируем существование
+
+    await async_db.conn.execute(
+        """UPDATE user_quota 
+           SET paid_credits = paid_credits + ? 
+           WHERE user_id = ?""",
+        (user_credits, user_id)
+    )
+    await async_db.conn.commit()
+
+    logger.info(f"💰 user_{user_id}: начислено {user_credits} платных кредитов")
+    return True
+
+
+async def get_quota_balance(user_id: int) -> tuple[int, int, int]:
+    quota = await _get_or_create_quota(user_id)
+
+    free_left = max(0, quota.get("free_limit", 0) - quota.get("free_used", 0))
+    paid_left = max(0, quota.get("paid_credits", 0) - quota.get("paid_used", 0))
+    return free_left, paid_left, free_left + paid_left
+
+async def refund_credit(user_id: int, usage_type: str = "free") -> bool:
+    """Возвращает 1 кредит. Безопасно (не уходит в минус)"""
+    field = "free_used" if usage_type == "free" else "paid_used"
+    await async_db.conn.execute(
+        f"UPDATE user_quota SET {field} = MAX(0, {field} - 1) WHERE user_id = ?",
+        (user_id,)
+    )
+    await async_db.conn.commit()
+    logger.info(f"💸 Возврат 1 кредита ({usage_type}) для user_{user_id}")
+    return True
+
+async def is_unlimited_user(user_id: int) -> bool:
+    """Проверяет, есть ли у пользователя безлимит"""
+    quota = await _get_or_create_quota(user_id)
+    return bool(quota.get("is_unlimited", False))

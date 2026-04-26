@@ -1,11 +1,11 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from services.forge_api import fetch_available_models
 from models.user_state import get_user_settings, update_user_settings
 from presets import get_preset_list
 import config
 from models.users_presets import get_user_preset
+from services.forge_api import fetch_available_models
 
 logger = logging.getLogger(__name__)
 
@@ -113,15 +113,26 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.edit_message_text("🎛 Главное меню:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        "📚 **Справка по боту**\n\n"
+        "🎨 **Генерация:**\n"
+        "`/gen <промпт>` — создать изображение (английский = лучше результат)\n"
+        "`/model` — выбрать нейросеть (модель)\n"
+        "`/preset` — применить стиль или создать свой пресет\n"
+        "`/settings` — текущие параметры генерации\n"
+        "`/cancel` — отменить мастер пресетов или зависшую задачу\n"
+        "💳 **Баланс и оплата:**\n"
+        "`/balance` — проверить количество доступных генераций\n"
+        "`/buy` — купить пакет генераций за Telegram Stars ⭐\n"
+        "📜 **История и поддержка:**\n"
+        "`/history` — твои последние 10 генераций\n"
+        "`/report` — если кредиты списались, но картинка не пришла\n"
+        "💡 **Советы:**\n"
+        "• Пиши промпты на английском — результаты лучше\n"
+        "• Используй пресеты для быстрого старта\n"
+        "• Кнопки 🔄 под фото позволяют перегенерировать без /gen"
+    )
     await update.message.reply_text(
-        "📚 **Команды бота**:\n\n"
-        "/start — начать работу, показать меню\n"
-        "/gen <промпт> — сгенерировать изображение\n"
-        "/model — открыть выбор моделей\n"
-        "/preset — применить стиль-пресет\n"
-        "/help — эта справка\n\n"
-        "/settings - текущие настройки\n"
-        "💡 **Советы для новичка**:\n"
-        "• Пиши промпты на английском — результаты лучше",
+        text,
         parse_mode="Markdown"
     )

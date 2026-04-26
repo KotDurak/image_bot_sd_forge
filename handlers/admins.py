@@ -77,3 +77,17 @@ async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"🔄 Счётчик сброшен для user_{target_id}")
     except ValueError:
         await update.message.reply_text("❌ Неверный user_id")
+
+
+async def debug_add_credits(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Только для админов: начислить кредиты без оплаты"""
+    if update.effective_user.id not in config.ADMINS:
+        return
+
+    user_credits = int(context.args[0]) if context.args else 5
+    user_id = update.effective_user.id
+
+    from models.user_quota import add_paid_credits
+    await add_paid_credits(user_id, user_credits)
+
+    await update.message.reply_text(f"🔧 DEBUG: user_{user_id} начислено {user_credits} кредитов.")

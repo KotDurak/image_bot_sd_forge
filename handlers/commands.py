@@ -7,6 +7,7 @@ from services.forge_api import fetch_available_models, call_forge_api
 from models.user_state import get_user_settings, update_user_settings
 import config
 from models.users_presets import get_user_preset
+from models.generation_log import get_user_history
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,16 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
     allowed, reason = await check_generation_limit(user_id)
 
     if not allowed:
-        await update.message.reply_text(reason)
+        if reason == 'no_credits':
+            kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🛒 Купить генерации", callback_data="buy_starter")
+            ]])
+            await update.message.reply_text(
+                "⚠️ Лимит генераций исчерпан.\n💡 Пополните счёт, чтобы продолжить:",
+                reply_markup=kb
+            )
+        else:
+            await update.message.reply_text(reason)
         return
 
     prompt = " ".join(context.args) if context.args else update.message.text.replace("/gen", "").strip()
@@ -104,12 +114,14 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
         payload=payload,
         message=update.message,
         progress_msg=progress_msg,
-        callback=call_forge_api
+        callback=call_forge_api,
+        usage_type=reason,
+        preset_used=preset_key
     )
     await queue_manager.add_request(queue_item)
 
-    # 🔥 Тут уже есть await — ок ✅
-    await increment_usage(user_id)
+    # 🔥 Тут уже есть await — ок
+    await increment_usage(user_id, usage_type=reason)
 
 
 async def preset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -187,3 +199,36 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")]]
 
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показывает историю генераций пользователя"""
+    user_id = update.effective_user.id
+    history = await get_user_history(user_id, limit=10)
+
+    if not history:
+        await update.message.reply_text("📭 У тебя пока нет истории генераций.\nНачни с /gen!")
+        return
+
+    text = f"📜 **Твои последние генерации** ({len(history)}):\n\n"
+
+    for i, item in enumerate(history, 1):
+        status_emoji = "✅" if item["status"] == "success" else "❌"
+        model_short = item["model_used"] or "default"
+        if model_short and " [" in model_short:
+            model_short = model_short.split(" [")[0]
+
+        text += (
+            f"{i}. {status_emoji} `{item['prompt'][:50]}...`\n"
+            f"   🎨 {model_short} | ⏱ {item['generation_time_sec'] or 0:.1f}с\n"
+            f"   🕐 {item['created_at'][:16]}\n\n"
+        )
+
+    # Кнопка "Очистить историю" (опционально, для админов или позже)
+    keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data="history_refresh")]]
+
+    await update.message.reply_text(
+        text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )

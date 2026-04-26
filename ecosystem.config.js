@@ -14,7 +14,11 @@ module.exports = {
       NODE_ENV: "development",
     },
     error_file: "logs/err.log",
-    out_file: "logs/out.log",
-    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: "/dev/null",
+    log_date_format: "YYYY-MM-DD HH:mm:ss",
+    log_rotator: {
+      max_size: "10M",
+      max_files: 3
+    },
   }]
 }

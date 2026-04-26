@@ -13,11 +13,10 @@ class AsyncDB:
     async def init(self):
         if self._conn is None:
             self._conn = await aiosqlite.connect(self.path)
-            # Те же PRAGMAS, что у тебя в Peewee, плюс небольшие улучшения
             await self._conn.execute("PRAGMA journal_mode=WAL;")
             await self._conn.execute("PRAGMA busy_timeout=5000;")  # +2 сек к твоему 3000
             await self._conn.execute("PRAGMA synchronous=NORMAL;")
-            await self._conn.execute("PRAGMA cache_size=-32000;")   # 32 MB (половина от peewee, для теста)
+            await self._conn.execute("PRAGMA cache_size=-32000;")   # 32
             logger.info(f"🔌 AsyncDB инициализирована: {self.path}")
 
     async def close(self):

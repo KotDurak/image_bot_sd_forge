@@ -1,28 +1,44 @@
-import asyncio
-import logging
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, \
+    PreCheckoutQueryHandler
 from telegram import Update
 from telegram.request import HTTPXRequest
-
+from handlers import payments, commands, callbacks, presets, admins
 from db.async_core import async_db
-import config
-from utils.logger import setup_logging
-from handlers import commands, callbacks, presets, admins
 from services.queue_manager import GenerationQueue
+import config
+import logging
+import asyncio
+from utils.logger import setup_logging
+setup_logging(config.MODE, logs_dir=config.LOGS_DIR)
+queue_manager = GenerationQueue()
 
-from pathlib import Path
-
-PROJECT_DIR = Path(__file__).parent
-setup_logging()
 logger = logging.getLogger(__name__)
 
-queue_manager = GenerationQueue()
-app = None
+async def post_init(app: Application):
+    """Асинхронная инициализация: БД, очередь, логирование"""
+    await async_db.init()
+    logger.info("🔌 БД подключена (aiosqlite)")
+
+    await queue_manager.start()
+    logger.info("🚀 Очередь генерации запущена")
+
+    logger.info("🤖 Бот запущен и готов к творчеству!")
+
+
+async def post_shutdown(app: Application):
+    """Асинхронная очистка при завершении"""
+    logger.info("🧹 Корректное завершение работы...")
+
+    await queue_manager.stop()
+    await async_db.close()
+
+    logger.info("✅ Бот остановлен. Коты довольны.")
 
 
 async def generate_with_queue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Wrapper для передачи queue_manager в handler"""
-    await commands.generate(update, context, queue_manager)
+    # Создаём корутину и планируем её выполнение
+    asyncio.create_task(commands.generate(update, context, queue_manager))
 
 
 def register_handlers(app: Application):
@@ -34,6 +50,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("cancel", presets.cancel_wizard))
     app.add_handler(CommandHandler("model", commands.model_command))
     app.add_handler(CommandHandler("settings", commands.settings_command))
+    app.add_handler(CommandHandler("history", commands.history_cmd))
 
     app.add_handler(CallbackQueryHandler(callbacks.select_model_callback, pattern="^select_model$|^model_"))
     app.add_handler(CallbackQueryHandler(presets.preset_router, pattern="^preset|^presets"))
@@ -45,70 +62,41 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("unlimited", admins.unlimited_cmd))
     app.add_handler(CommandHandler("ban", admins.ban_cmd))
     app.add_handler(CommandHandler("reset", admins.reset_cmd))
+    app.add_handler(CommandHandler('add_credits', admins.debug_add_credits))
+
+    # 💰 Платежи
+    app.add_handler(CommandHandler("buy", payments.buy_credits_cmd))
+    app.add_handler(CallbackQueryHandler(payments.process_purchase_callback, pattern="^buy_"))
+    app.add_handler(CommandHandler("balance", payments.balance_cmd))
+    app.add_handler(CommandHandler("report", payments.report_cmd))
+
+    # ⭐ Обязательные хендлеры для Telegram Payments API
+    app.add_handler(PreCheckoutQueryHandler(payments.pre_checkout_callback))
+    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, payments.successful_payment_callback))
 
 
-# ─── Асинхронный цикл бота ───────────────────────────────────────────────────
-async def run_bot():
-    """Запуск бота с корректной инициализацией и обработкой сигналов"""
+def main():
+    """Точка входа — синхронная, без asyncio.run()"""
 
-    # 1. Настраиваем приложение
     app = Application.builder() \
         .token(config.TELEGRAM_TOKEN) \
         .request(HTTPXRequest(connect_timeout=10, read_timeout=20)) \
+        .post_init(post_init) \
+        .post_shutdown(post_shutdown) \
         .build()
 
     register_handlers(app)
 
     try:
-        # 🔥 2. Инициализируем БД (асинхронно!)
-        await async_db.init()
-        logger.info("🔌 БД подключена (aiosqlite)")
-
-        # 3. Запускаем зависимые сервисы
-        await queue_manager.start()
-        logger.info("🤖 Бот запущен и готов к творчеству!")
-
-        # 4. Стандартный запуск PTB
-        await app.initialize()
-        await app.start()
-        await app.updater.start_polling(
+        # ✅ БЛОКИРУЮЩИЙ вызов — НЕ await!
+        app.run_polling(
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True
         )
-
-        # Держим бота запущенным
-        await asyncio.Event().wait()
-
-    except asyncio.CancelledError:
-        logger.info("🛑 Получен сигнал остановки")
-    except Exception as e:
-        logger.error(f"❌ Критическая ошибка в боте: {e}", exc_info=True)
-        raise
-    finally:
-        logger.info("🧹 Корректное завершение работы...")
-
-        # Останавливаем в обратном порядке
-        if app and app.updater and app.updater.running:
-            await app.updater.stop()
-        if app:
-            await app.stop()
-            await app.shutdown()
-
-        await queue_manager.stop()
-
-        # 🔥 Закрываем БД (асинхронно!)
-        await async_db.close()
-        logger.info("✅ Бот остановлен. Коты довольны.")
-
-
-def main():
-    # 🔥 Убираем init_db() — теперь БД инициализируется асинхронно внутри run_bot()
-    try:
-        asyncio.run(run_bot())
     except KeyboardInterrupt:
-        pass  # Нормальный выход
+        logger.info("🛑 Получен сигнал остановки (Ctrl+C)")
     except Exception as e:
-        logger.error(f"Глобальная ошибка: {e}")
+        logger.error(f"❌ Глобальная ошибка: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
