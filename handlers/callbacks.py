@@ -140,11 +140,12 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.edit_message_text("🎛 Главное меню:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-# handlers/callbacks.py
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Умная справка: показывает команды в зависимости от роли пользователя"""
     user_id = update.effective_user.id
     is_admin = user_id in config.ADMINS
+    msg = update.effective_message or update.message  # 🔒 Защита от NoneType
 
     # 🎨 Базовые команды (видят все)
     text = (
@@ -152,8 +153,10 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "🎨 **Генерация:**\n"
         "`/gen <промпт>` — создать изображение (писать на английском)\n"
         "`/model` — выбрать нейросеть (модель)\n"
+        "`/vae` — выбрать декодер (решает проблемы с цветами/мылом)\n"
         "`/preset` — меню пресетов: применить или создать через визард\n"
-        "`/preset_add name=... key=...` — 🚀 быстрое создание пресета в одну строку\n"
+        "`/preset_add` — 🚀 быстрое создание пресета в одну строку:\n"
+        "`/preset_add name=PonyV6 key=pony prefix=score_9, score_8_up, res=832x1216 steps=28 sampler=DPM++ 2M scheduler=karras prompt=masterpiece negative=bad hands`\n"
         "`/settings` — текущие параметры генерации (CFG, sampler, размер)\n"
         "`/cancel` — отменить мастер пресетов или зависшую задачу\n"
         "`/start` — сбросить настройки пользователя (если застрял)\n"
@@ -172,7 +175,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "\n"
         "💡 **Советы:**\n"
         "• *Пиши промпты на английском (важно)*\n"
-        "• Используй `/preset_add` для быстрого создания стилей\n"
+        "• Для Pony V6 обязательно используй `prefix=score_9, score_8_up, score_7_up,`\n"
+        "• Размеры должны быть кратны 8 (например, 832×1216)\n"
         "• Реклама показывается после генерации — можно пропустить"
     )
 
@@ -202,9 +206,30 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if is_admin:
         keyboard.append([InlineKeyboardButton("📊 Реклама: отчёт", callback_data="ad_page_1_1")])
 
-    await update.message.reply_text(
+    await msg.reply_text(
         text,
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard),
         disable_web_page_preview=True
     )
+
+
+async def cb_vae_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик выбора VAE из коллбэка"""
+    query = update.callback_query
+    await query.answer()
+
+    user_id = query.from_user.id
+    callback_data = query.data  # например: "vae_sdxl_vae.safetensors" или "vae_null"
+
+    if callback_data == "vae_null":
+        vae_value = None
+        msg = "🔄 VAE сброшен: теперь используется автоподбор под модель"
+    else:
+        # Парсим: "vae_filename.safetensors" → "filename.safetensors"
+        vae_value = callback_data.replace("vae_", "", 1)
+        msg = f"✅ Установлен VAE: <code>{vae_value}</code>"
+
+    await update_user_settings(user_id, username=None, vae=vae_value)
+
+    await query.edit_message_text(msg, parse_mode="HTML")

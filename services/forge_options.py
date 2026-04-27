@@ -29,14 +29,15 @@ class ForgeOptionsCache:
 
     @classmethod
     async def _fetch_from_api(cls, endpoint: str) -> Optional[List[str]]:
-        """Делает запрос к Forge API и возвращает список name"""
+        """Делает запрос к Forge API и возвращает список name (в оригинальном регистре!)"""
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.get(f"{cls._forge_url}/sdapi/v1/{endpoint}")
                 resp.raise_for_status()
                 data = resp.json()
                 if isinstance(data, list):
-                    return [item["name"].lower() for item in data if "name" in item]
+
+                    return [item["name"] for item in data if "name" in item]
         except Exception as e:
             logger.warning(f"⚠️ Не удалось загрузить {endpoint} из Forge: {e}")
         return None
@@ -71,11 +72,12 @@ class ForgeOptionsCache:
 
     @classmethod
     def is_valid_sampler(cls, name: str) -> bool:
-        return name.lower() in (s.lower() for s in (cls._samplers or DEFAULT_SAMPLERS))
+        #  FIX: сравниваем case-insensitive, но храним оригинал
+        return any(name.lower() == s.lower() for s in (cls._samplers or DEFAULT_SAMPLERS))
 
     @classmethod
     def is_valid_scheduler(cls, name: str) -> bool:
-        return name.lower() in (s.lower() for s in (cls._schedulers or DEFAULT_SCHEDULERS))
+        return any(name.lower() == s.lower() for s in (cls._schedulers or DEFAULT_SCHEDULERS))
 
     @classmethod
     def get_samplers(cls) -> List[str]:

@@ -336,21 +336,24 @@ async def cancel_wizard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def quick_preset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    🚀 Быстрое создание пресета в одну строку.
-    Работает с пробелами без кавычек: /preset_add name=Аниме Киберпанк key=anime prompt=neon city
-    """
+    """🚀 Быстрое создание пресета в одну строку с валидацией"""
+    # 🔥 FIX: effective_message работает с командами, колбэками и edited messages
+    msg = update.effective_message
+    if not msg:
+        return
+
     user_id = update.effective_user.id
     if not context.args:
-        await update.message.reply_text(
+        await msg.reply_text(
             "❌ Использование:\n"
-            "`/preset_add name=<str> key=<str> [res=512x768] [steps=25] [cfg=7.0] [sampler=...] [scheduler=...] [prompt=...] [negative=...]`\n"
-            "💡 Пробелы в значениях работают автоматически. Кавычки необязательны.",
+            "`/preset_add name=<str> key=<str> [prefix=...] [res=WxH] [steps=N] [cfg=N] [sampler=...] [scheduler=...] [prompt=...] [negative=...]`\n"
+            "💡 `prefix` добавляется в НАЧАЛО промпта (важно для Pony: score_9, ...)\n"
+            "💡 `prompt` добавляется в КОНЕЦ промпта пользователя.",
             parse_mode="Markdown"
         )
         return
 
-    # 🔍 Умный парсер флагов (поддерживает пробелы в значениях)
+    # 🔍 Парсинг аргументов
     args = {}
     current_key = None
     try:
@@ -360,92 +363,102 @@ async def quick_preset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 args[key.lower().strip()] = val.strip()
                 current_key = key.lower().strip()
             elif current_key is not None:
-                # Это продолжение предыдущего значения (пробел внутри аргумента)
                 args[current_key] += ' ' + arg
             else:
-                return await update.message.reply_text(f"❌ Неверный формат: `{arg}`. Ожидается `ключ=значение`")
-
-        # Очистка от кавычек (если пользователь всё же их поставил)
+                await msg.reply_text(f"❌ Неверный формат: `{arg}`. Ожидается `ключ=значение`")
+                return
         for k in args:
             args[k] = args[k].strip().strip("\"'").strip()
     except Exception:
-        return await update.message.reply_text("❌ Ошибка парсинга. Проверьте формат `ключ=значение`")
+        await msg.reply_text("❌ Ошибка парсинга. Проверьте формат `ключ=значение`")
+        return
 
     # 📋 Обязательные поля
     name = args.get("name")
     key = args.get("key")
     if not name or len(name) > 30:
-        return await update.message.reply_text("❌ `name` обязателен (1-30 символов)")
+        await msg.reply_text("❌ `name` обязателен (1-30 символов)")
+        return
     if not key or not all(c.isalnum() or c == '_' for c in key.lower()):
-        return await update.message.reply_text("❌ `key` обязателен (латиница, цифры, _)")
+        await msg.reply_text("❌ `key` обязателен (латиница, цифры, _)")
+        return
 
     if await get_user_preset(user_id, key.lower()):
-        return await update.message.reply_text(f"❌ Ключ `{key}` уже занят")
+        await msg.reply_text(f"❌ Ключ `{key}` уже занят")
+        return
 
-    # 📐 Разрешение
+    # 📐 Разрешение (строгая валидация)
     res_str = args.get("res", "512x768")
     try:
-        max_res = 1344  # Чтобы видеокарта не плакала
         w, h = map(int, res_str.split("x"))
-        if not (128 <= w <= max_res and 128 <= h <= max_res): raise ValueError
-    except:
-        return await update.message.reply_text("❌ `res` в формате `WxH` (например: 512x768)")
+        if w % 8 != 0 or h % 8 != 0:
+            raise ValueError("Кратно 8")
+        if not (256 <= w <= 1344 and 256 <= h <= 1344):
+            raise ValueError("Диапазон 256-2048")
+    except ValueError as e:
+        await msg.reply_text(f"❌ `res` в формате `WxH`, кратно 8, диапазон 256-2048. ({e})")
+        return
 
     # 🔢 Шаги
     try:
-        steps = int(args.get("steps", "25"))
-        if not (10 <= steps <= 150): raise ValueError
-    except:
-        return await update.message.reply_text("❌ `steps` должно быть числом от 10 до 150")
+        steps = int(args.get("steps", "28"))
+        if not (10 <= steps <= 50):
+            raise ValueError
+    except ValueError:
+        await msg.reply_text("❌ `steps`: целое число от 10 до 50")
+        return
 
     # ⚖️ CFG
     try:
         cfg = float(args.get("cfg", "7.0").replace(",", "."))
-        if not (1.0 <= cfg <= 30.0): raise ValueError
-    except:
-        return await update.message.reply_text("❌ `cfg` должно быть числом от 1.0 до 30.0")
+        if not (1.0 <= cfg <= 30.0):
+            raise ValueError
+    except ValueError:
+        await msg.reply_text("❌ `cfg`: число от 1.0 до 30.0")
+        return
 
     await ForgeOptionsCache.ensure_loaded()
 
-    # Сэмплер & Шедулер (регистронезависимо)
-    sampler_in = args.get("sampler", "Euler")
-    sched_in = args.get("scheduler", "automatic")
+    # 🔄 Сэмплер & Шедулер
+    sampler_in = args.get("sampler", "DPM++ 2M")
+    sched_in = args.get("scheduler", "karras")
 
     if not ForgeOptionsCache.is_valid_sampler(sampler_in):
-        available = ", ".join(ForgeOptionsCache.get_samplers()[:10])  # Показываем первые 10
-        return await update.message.reply_text(f"❌ Неизвестный `sampler`. Примеры: {available}")
-
+        await msg.reply_text(f"❌ Неизвестный `sampler`. Доступны: {', '.join(ForgeOptionsCache.get_samplers()[:8])}")
+        return
     if not ForgeOptionsCache.is_valid_scheduler(sched_in):
-        available = ", ".join(ForgeOptionsCache.get_schedulers()[:10])
-        return await update.message.reply_text(f"❌ Неизвестный `scheduler`. Примеры: {available}")
+        await msg.reply_text(f"❌ Неизвестный `scheduler`. Доступны: {', '.join(ForgeOptionsCache.get_schedulers()[:8])}")
+        return
 
     sampler_final = next((s for s in ForgeOptionsCache.get_samplers() if s.lower() == sampler_in.lower()), sampler_in)
     sched_final = next((s for s in ForgeOptionsCache.get_schedulers() if s.lower() == sched_in.lower()), sched_in)
 
     # 📝 Промпты
-    prompt = f", {args['prompt']}" if "prompt" in args else ""
+    prompt_prefix = args.get("prefix", "")
+    prompt_suffix = f", {args['prompt']}" if "prompt" in args else ""
     negative = args.get("negative", "")
 
     # 💾 Сохранение
     success = await add_user_preset(
         user_id=user_id, preset_key=key.lower(), name=name,
-        prompt_suffix=prompt, negative_suffix=negative,
-        width=w, height=h, steps=steps,
-        cfg_scale=cfg, sampler=sampler_final, scheduler=sched_final
+        prompt_prefix=prompt_prefix, prompt_suffix=prompt_suffix, negative_suffix=negative,
+        width=w, height=h, steps=steps, cfg_scale=cfg,
+        sampler=sampler_final, scheduler=sched_final
     )
 
     if success:
-        await update.message.reply_text(
+        await msg.reply_text(
             f"✅ Пресет создан!\n"
             f"🔑 `{key.lower()}` | 🏷️ `{name}`\n"
             f"📐 {w}x{h} | 🔢 {steps} | ⚖️ {cfg}\n"
             f"🔄 {sampler_final} | 📅 {sched_final}\n"
-            f"📝 Промпт: `{prompt or '(пусто)'}`\n\n"
+            f"🟢 Префикс: `{prompt_prefix or '—'}`\n"
+            f"🔴 Суффикс: `{prompt_suffix or '—'}`\n\n"
             f"Активируйте: `/preset` → `🔑 {key.lower()}`",
             parse_mode="Markdown"
         )
     else:
-        await update.message.reply_text("❌ Ошибка при сохранении (проверьте логи)")
+        await msg.reply_text("❌ Ошибка при сохранении (проверьте логи)")
 
 async def list_samplers_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает доступные сэмплеры из Forge"""

@@ -4,6 +4,8 @@ from telegram import Update
 from telegram.request import HTTPXRequest
 from handlers import payments, commands, callbacks, presets, admins, ad_management
 from db.async_core import async_db
+from handlers.callbacks import cb_vae_select
+from handlers.commands import vae_command
 from services.queue_manager import GenerationQueue
 import config
 import logging
@@ -54,6 +56,8 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("model", commands.model_command))
     app.add_handler(CommandHandler("settings", commands.settings_command))
     app.add_handler(CommandHandler("history", commands.history_cmd))
+    app.add_handler(CommandHandler("vae", vae_command))
+    app.add_handler(CallbackQueryHandler(cb_vae_select, pattern="^vae_"))
 
     # 📥 Импорт рекламы
     app.add_handler(CommandHandler("ad_template", ad_management.send_ad_template))

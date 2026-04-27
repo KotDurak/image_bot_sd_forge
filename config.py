@@ -33,8 +33,8 @@ DEFAULTS = {
     "width": 512,
     "height": 768,
     "negative_prompt": "blurry, lowres, bad anatomy, bad hands, text, watermark",
-    "sampler_name": "Euler",
-    "scheduler": "Automatic",
+    "sampler_name": "DPM++ 2M",
+    "scheduler": "karras",
 }
 
 # 🖼 Модели
@@ -82,14 +82,25 @@ SAMPLERS = {
     "DDIM 📜": "DDIM",
     "PLMS 📐": "PLMS"
 }
+
+# 🔥 FIX: значения шедулеров — с большой буквы, как ждёт Forge API
 SCHEDULERS = {
     "Automatic 🤖": "automatic",
-    "Normal 📉": "normal",
+    "Uniform 📏": "uniform",
     "Karras 📈": "karras",
     "Exponential 🧬": "exponential",
+    "Polyexponential 🌊": "polyexponential",
     "SGM Uniform ⚖️": "sgm_uniform",
+    "KL Optimal 🎯": "kl_optimal",
+    "Align Your Steps 🚶": "align_your_steps",
     "Simple ⚡": "simple",
-    "DDIM Uniform 📏": "ddim_uniform"
+    "Normal 📉": "normal",
+    "DDIM 📜": "ddim",
+    "Beta 🧪": "beta",
+    "Turbo 🚀": "turbo",
+    "AYS GITS 🧠": "align_your_steps_GITS",
+    "AYS 11 🔢": "align_your_steps_11",
+    "AYS 32 🔢": "align_your_steps_32",
 }
 
 # 🗄 База данных
