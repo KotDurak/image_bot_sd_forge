@@ -15,7 +15,7 @@ from services.forge_api import fetch_available_models, fetch_available_vae, call
 from services.queue_manager import QueueItem
 import random
 import re
-
+from utils.translate import translate_prompt_free
 logger = logging.getLogger(__name__)
 CYRILLIC_RE = re.compile(r'[а-яА-ЯёЁ]')
 
@@ -43,7 +43,7 @@ async def _build_generation_payload(
     # 1. Базовая структура (строго по валидному JSON)
     payload = {
         "prompt": prompt,
-        "negative_prompt": "",
+        "negative_prompt": config.DEFAULTS.get("negative_prompt", ""),
         "steps": config.DEFAULTS["steps"],
         "cfg_scale": config.DEFAULTS["cfg_scale"],
         "seed": -1,
@@ -77,7 +77,8 @@ async def _build_generation_payload(
     # Фильтруем пустые строки, склеиваем пробелом, убираем лишние пробелы
     parts = [p.strip() for p in (prompt_prefix, prompt, prompt_suffix) if p]
     payload["prompt"] = " ".join(parts)
-    payload["negative_prompt"] = negative_suffix
+    if negative_suffix:
+        payload["negative_prompt"] = negative_suffix
 
     # 4. Резолв VAE
     user_settings = await get_user_settings(user_id)
@@ -152,20 +153,25 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_man
         return
 
     if CYRILLIC_RE.search(prompt):
-        await update.message.reply_text(
-            "🇷🇺 Обнаружен русский текст. 🎨 Нейросети обучались на английских тегах.\n\n"
-            "💡 Пиши промпт на английском (через запятую):\n"
-            "`1girl, cyberpunk city, neon lights, masterpiece`\n\n"
-            "🔄 `/help` — примеры и команды"
-        )
-        return
+        # 🌐 Пробуем бесплатный облачный перевод
+        prompt = await translate_prompt_free(prompt)
+        # Если кириллица осталась (API выкл, упал, превышен лимит или не справился)
+        if CYRILLIC_RE.search(prompt):
+            await update.message.reply_text(
+                "🇷🇺 Нейросети не понимают русский. Переведи промпт на английский (Google, DeepL, Яндекс)\n"
+                "💡 Пример: `cat stealing ham, cinematic lighting, photorealistic`",
+                parse_mode="Markdown"
+            )
+            return
 
     settings = await get_user_settings(user_id)
+    active_model = settings.get("model") or config.DEFAULT_MODEL
+
     payload, _, _ = await _build_generation_payload(
         user_id=user_id,
         prompt=prompt,
         preset_key=settings.get("preset"),
-        model_name=settings.get("model")
+        model_name=active_model
     )
 
     progress_msg = await update.message.reply_text("⏳ Подключение к очереди...")

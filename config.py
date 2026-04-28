@@ -28,11 +28,11 @@ MODE = os.getenv("MODE", "PROD").upper()
 
 # 🎨 Дефолты генерации
 DEFAULTS = {
-    "steps": 25,
-    "cfg_scale": 7.0,
-    "width": 512,
-    "height": 768,
-    "negative_prompt": "blurry, lowres, bad anatomy, bad hands, text, watermark",
+    "steps": 6,                    # Lightning любит быстро
+    "cfg_scale": 1.5,              # Низкий CFG = меньше артефактов
+    "width": 832,                  # SDXL-родное разрешение (вертикаль)
+    "height": 1216,
+    "negative_prompt": "blurry, lowres, bad anatomy, bad hands, text, watermark, ugly, deformed, noisy",
     "sampler_name": "DPM++ 2M",
     "scheduler": "karras",
 }
@@ -119,3 +119,17 @@ ADS_PAID_CHANCE = float(os.getenv("ADS_PAID_CHANCE", "0.1"))  # 10% шанс п�
 
 AD_REPORT_ANONYMIZE = os.getenv("AD_REPORT_ANONYMIZE", "true").lower() == "true"
 AD_REPORT_SALT = os.getenv("AD_REPORT_SALT", "change_me_in_prod")  # Соль для хеширования
+
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "juggernautXL_v9Rdphoto2Lightning")
+
+# 🌍 Настройки языка и перевода
+SHOW_LANGUAGE_WARNING = os.getenv("SHOW_LANGUAGE_WARNING", "true").lower() == "true"
+ENABLE_FREE_TRANSLATE = os.getenv("ENABLE_FREE_TRANSLATE", "false").lower() == "true"
+
+# ⚠️ Предупреждение для пользователей (показывается, если промпт не на латинице)
+PROMPT_LANGUAGE_WARNING = (
+    "⚠️ *Совет*: пиши промпты на **английском** — так нейросеть поймёт тебя точнее.\n"
+    "Можешь использовать Google Translate: даже простой перевод даст лучший результат."
+)
+
+EMAIL = os.getenv('EMAIL', '')
