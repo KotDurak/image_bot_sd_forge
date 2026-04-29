@@ -38,8 +38,8 @@ def call_forge_api(payload: dict) -> bytes | None:
     url = f"{config.FORGE_URL}/sdapi/v1/txt2img"
     start = time.time()
     try:
-        #import json
-        #logger.error(f"📤 FINAL PAYLOAD TO FORGE:\n{json.dumps(payload, indent=2, ensure_ascii=False)[:1500]}")
+        import json
+        logger.error(f"📤 FINAL PAYLOAD TO FORGE:\n{json.dumps(payload, indent=2, ensure_ascii=False)[:1500]}")
         logger.info(f"🔗 POST {url} | prompt: {payload.get('prompt', '')[:50]}...")
         response = requests.post(
             url,
@@ -73,3 +73,22 @@ def switch_forge_model(model_checkpoint: str) -> None:
         proxies={'http': None, 'https': None}
     )
     resp.raise_for_status()
+
+def fetch_available_loras(user_id: int = None) -> list[dict]:
+    """Получает список доступных LoRA. Возвращает [{'name': 'file.safetensors', 'alias': '...'}]."""
+    try:
+        resp = requests.get(f"{config.FORGE_URL}/sdapi/v1/loras", timeout=10)
+        resp.raise_for_status()
+        all_loras = resp.json()
+        if not config.HIDDEN_LORAS or (user_id and user_id in config.ADMINS):
+            return all_loras
+
+        return [
+            l for l in all_loras
+            if l.get("name", "").lower() not in config.HIDDEN_LORAS
+               and l.get("alias", "").lower() not in config.HIDDEN_LORAS
+        ]
+
+    except Exception as e:
+        logger.error(f"fetch_available_loras error: {e}")
+        return []

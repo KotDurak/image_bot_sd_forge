@@ -1,106 +1,21 @@
 """
 Команды бота: генерация, пресеты, настройки, история.
-Архитектура: payload собирается ЗДЕСЬ и передаётся дальше БЕЗ ИЗМЕНЕНИЙ.
+Архитектура: тонкий слой оркестрации → вся логика в services/utils.
 """
 import logging
-from typing import Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import config
 from models.generation_log import get_user_history
-from models.user_quota import check_generation_limit, increment_usage
 from models.user_state import get_user_settings, update_user_settings
 from models.users_presets import get_user_preset
-from services.forge_api import fetch_available_models, fetch_available_vae, call_forge_api
-from services.queue_manager import QueueItem
-import random
-import re
-from utils.translate import translate_prompt_free
+from services.forge_api import fetch_available_models, fetch_available_vae,fetch_available_loras
+from services.payload_builder import build_generation_payload
+from services.generation_pipeline import check_user_limits, submit_to_queue
+from utils.prompt_utils import extract_prompt, prepare_prompt
+import html
+
 logger = logging.getLogger(__name__)
-CYRILLIC_RE = re.compile(r'[а-яА-ЯёЁ]')
-
-# =============================================================================
-# === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==================================================
-# =============================================================================
-
-def _apply_preset_to_payload(payload: dict, preset_cfg: dict) -> None:
-    payload.update({
-        "width": preset_cfg.get("width", payload["width"]),
-        "height": preset_cfg.get("height", payload["height"]),
-        "steps": preset_cfg.get("steps", payload["steps"]),
-        "cfg_scale": preset_cfg.get("cfg_scale", payload["cfg_scale"]),
-        "sampler_name": preset_cfg.get("sampler", payload["sampler_name"]),
-        "scheduler": preset_cfg.get("scheduler", payload.get("scheduler", "karras")),
-    })
-
-
-async def _build_generation_payload(
-    user_id: int,
-    prompt: str,
-    preset_key: Optional[str],
-    model_name: Optional[str]
-) -> tuple[dict, str, str]:
-    # 1. Базовая структура (строго по валидному JSON)
-    payload = {
-        "prompt": prompt,
-        "negative_prompt": config.DEFAULTS.get("negative_prompt", ""),
-        "steps": config.DEFAULTS["steps"],
-        "cfg_scale": config.DEFAULTS["cfg_scale"],
-        "seed": -1,
-        "width": config.DEFAULTS["width"],
-        "height": config.DEFAULTS["height"],
-        "sampler_name": config.DEFAULTS["sampler_name"],
-        "scheduler": config.DEFAULTS.get("scheduler", "karras"),
-        "batch_size": 1,
-        "n_iter": 1,
-        "restore_faces": False,
-        "tiling": False,
-        "do_not_save_samples": True,
-        "do_not_save_grid": True,
-    }
-
-    prompt_prefix, prompt_suffix, negative_suffix = "", "", ""
-
-    # 2. Применяем пресет (если выбран)
-    if preset_key:
-        cfg = config.PRESETS.get(preset_key)
-        if not cfg:
-            cfg = await get_user_preset(user_id, preset_key)
-
-        if cfg:
-            _apply_preset_to_payload(payload, cfg)
-            prompt_prefix = cfg.get("prompt_prefix", "")
-            prompt_suffix = cfg.get("prompt_suffix", "")
-            negative_suffix = cfg.get("negative_suffix", "")
-
-    # 3. Собираем финальный промпт: ПРЕФИКС + ВВОД ПОЛЬЗОВАТЕЛЯ + СУФФИКС
-    # Фильтруем пустые строки, склеиваем пробелом, убираем лишние пробелы
-    parts = [p.strip() for p in (prompt_prefix, prompt, prompt_suffix) if p]
-    payload["prompt"] = " ".join(parts)
-    if negative_suffix:
-        payload["negative_prompt"] = negative_suffix
-
-    # 4. Резолв VAE
-    user_settings = await get_user_settings(user_id)
-    user_vae = user_settings.get("vae")
-    vae_to_use = "Automatic"
-    if user_vae and user_vae != "None":
-        vae_to_use = user_vae
-    elif model_name and any(x in model_name.lower() for x in ["sdxl", "pony", "flux"]):
-        vae_to_use = "sdxl_vae.safetensors"
-
-    # 5. Формируем override_settings ТОЛЬКО здесь
-    override = {
-        "sd_vae": vae_to_use,
-        "CLIP_stop_at_last_layers": 2 if (model_name and "pony" in model_name.lower()) else 1
-    }
-    if model_name:
-        override["sd_model_checkpoint"] = model_name
-
-    payload["override_settings"] = override
-    payload["override_settings_restore_afterwards"] = True
-
-    return payload, prompt_suffix, negative_suffix
 
 
 # =============================================================================
@@ -131,65 +46,50 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_manager) -> None:
     user = update.effective_user
-    if not user: return
+    if not user:
+        return
     user_id = user.id
 
-    allowed, reason = await check_generation_limit(user_id)
-    if not allowed:
-        if reason == 'no_credits':
-            await update.message.reply_text(
-                "⚠️ Лимит исчерпан. Пополни счёт или подожди обновления.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🛒 Пополнить", callback_data="buy_starter")
-                ]])
-            )
-        else:
-            await update.message.reply_text(reason)
+    # 1. Проверка лимитов
+    usage_type = await check_user_limits(update, user_id)
+    if usage_type is None:
         return
 
-    prompt = " ".join(context.args) if context.args else update.message.text.replace("/gen", "", 1).strip()
-    if not prompt:
+    # 2. Извлечение промпта
+    prompt = extract_prompt(update, context)
+    if prompt is None:
         await update.message.reply_text("❌ Укажи промпт. Пример: `/gen cyberpunk city`")
         return
 
-    if CYRILLIC_RE.search(prompt):
-        # 🌐 Пробуем бесплатный облачный перевод
-        prompt = await translate_prompt_free(prompt)
-        # Если кириллица осталась (API выкл, упал, превышен лимит или не справился)
-        if CYRILLIC_RE.search(prompt):
-            await update.message.reply_text(
-                "🇷🇺 Нейросети не понимают русский. Переведи промпт на английский (Google, DeepL, Яндекс)\n"
-                "💡 Пример: `cat stealing ham, cinematic lighting, photorealistic`",
-                parse_mode="Markdown"
-            )
-            return
+    # 3. Перевод / валидация промпта
+    prompt = await prepare_prompt(update, prompt)
+    if prompt is None:
+        return
 
+    # 4. Сборка payload
     settings = await get_user_settings(user_id)
-    active_model = settings.get("model") or config.DEFAULT_MODEL
-
-    payload, _, _ = await _build_generation_payload(
+    payload, _, _ = await build_generation_payload(
         user_id=user_id,
         prompt=prompt,
         preset_key=settings.get("preset"),
-        model_name=active_model
+        model_name=settings.get("model") or config.DEFAULT_MODEL,
+        lora_string=settings.get("lora_string")
     )
 
+    # 5. Отправка в очередь
     progress_msg = await update.message.reply_text("⏳ Подключение к очереди...")
-    is_free = reason in ["free", "ok"]
-    show_ads = config.ADS_ENABLED and (is_free or (not is_free and random.random() < config.ADS_PAID_CHANCE))
-
-    queue_item = QueueItem(
-        user_id=user_id, prompt=prompt, payload=payload,
-        message=update.message, progress_msg=progress_msg,
-        callback=call_forge_api, usage_type=reason,
-        preset_used=settings.get("preset"), show_ads=show_ads
+    await submit_to_queue(
+        user_id=user_id,
+        prompt=prompt,
+        payload=payload,
+        settings=settings,
+        update=update,
+        progress_msg=progress_msg,
+        queue_manager=queue_manager,
+        usage_type=usage_type
     )
-    await queue_manager.add_request(queue_item)
-    await increment_usage(user_id, usage_type=reason)
 
 
-# ... (preset_command, model_command, vae_command, settings_command, history_cmd остаются без изменений)
-# Для экономии места оставляю их как в твоём коде. Главное — _build_generation_payload теперь правильный.
 async def preset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[
         InlineKeyboardButton("📋 Мои пресеты", callback_data="presets_list"),
@@ -241,22 +141,38 @@ async def cb_vae_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not user: return
-    s = await get_user_settings(user.id)
-    p = await get_user_preset(user.id, s["preset"]) if s["preset"] and s["preset"] not in config.PRESETS else None
-    w = p.get("width", config.DEFAULTS["width"]) if p else config.DEFAULTS["width"]
-    h = p.get("height", config.DEFAULTS["height"]) if p else config.DEFAULTS["height"]
-    steps = p.get("steps", config.DEFAULTS["steps"]) if p else config.DEFAULTS["steps"]
-    cfg = p.get("cfg_scale", config.DEFAULTS["cfg_scale"]) if p else config.DEFAULTS["cfg_scale"]
-    samp = p.get("sampler", config.DEFAULTS["sampler_name"]) if p else config.DEFAULTS["sampler_name"]
 
-    txt = (
-        f"⚙️ Настройки:\n🧠 Модель: `{s['model'] or 'default'}`\n"
-        f"🎨 Пресет: `{s['preset'] or 'none'}`\n🔧 VAE: `{s['vae'] or 'Авто'}`\n"
-        f"📏 {w}×{h} | 🔢 {steps} шагов | ⚖️ CFG {cfg} | 🔄 {samp}"
+    s = await get_user_settings(user.id)
+    preset_key = s.get("preset")
+    p = await get_user_preset(user.id, preset_key) if (preset_key and preset_key not in config.PRESETS) else None
+
+    def cfg(key, fallback=""):
+        return p.get(key, config.DEFAULTS.get(key, fallback)) if p else config.DEFAULTS.get(key, fallback)
+
+    info = {
+        "🧠 Модель": s.get("model") or "default",
+        "🎨 Пресет": preset_key or "нет",
+        "🔧 VAE": s.get("vae") or "Автоподбор",
+        "🧩 LoRA": s.get("lora_string") or "не заданы",
+        "📏 Размер": f"{cfg('width')}×{cfg('height')}",
+        "🔢 Шаги": cfg("steps"),
+        "⚖️ CFG": cfg("cfg_scale"),
+        "🔄 Сэмплер": cfg("sampler_name"),
+        "📅 Шедулер": cfg("scheduler") or config.DEFAULTS.get("scheduler", "karras"),
+    }
+
+    # ✅ Экранируем все динамические значения для безопасного HTML
+    txt = "⚙️ <b>Настройки генерации:</b>\n" + "\n".join(
+        f"{k}: <code>{html.escape(str(v))}</code>" for k, v in info.items()
     )
-    await update.message.reply_text(txt, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[
-        InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")
-    ]]))
+
+    await update.message.reply_text(
+        txt,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")
+        ]])
+    )
 
 
 async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -272,3 +188,52 @@ async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         pr = h['prompt'][:40] + "..." if len(h['prompt']) > 40 else h['prompt']
         lines.append(f"{i}. {st} `{pr}` | ⏱ {h['generation_time_sec']:.1f}с")
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def loras_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # ✅ Универсальный способ получить объект сообщения (работает и для /command, и для кнопки)
+    msg = update.effective_message
+    if not msg:
+        return
+
+    # ✅ Если это клик по кнопке, обязательно отвечаем серверу Telegram, чтобы не крутилось "часики"
+    if update.callback_query:
+        await update.callback_query.answer()
+
+
+    loras = fetch_available_loras(user_id = update.effective_user.id if update.effective_user else None)
+    if not loras:
+        await msg.reply_text("📭 LoRA не найдены или API недоступен.")
+        return
+
+    lines = ["🧩 Доступные LoRA:\n"]
+    for l in loras[:20]:
+        alias = l.get('alias', l['name'])
+        name = l['name']
+        lines.append(f"• `{alias}` → `<lora:{name}:1.0>`")
+
+    lines.append("\n💡 Скопируй тег и вставь прямо в промпт.")
+    lines.append("💾 Или сохри набор: `/lora_set <lora:name:0.8> <lora:name2:0.5>`")
+
+    await msg.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def lora_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Сохраняет строку LoRA в профиль пользователя."""
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Формат: `/lora_set <тег> [<тег> ...]`\n"
+            "Пример: `/lora_set <lora:epiCRealism:0.7>`"
+        )
+        return
+
+    lora_str = " ".join(context.args).strip()
+    await update_user_settings(update.effective_user.id, lora_string=lora_str if lora_str else None)
+    await update.message.reply_text(
+        f"✅ {'LoRA очищены' if not lora_str else 'LoRA сохранены'}: `{lora_str or '—'}`"
+    )
+
+async def lora_clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Очищает сохранённые LoRA-теги у пользователя."""
+    await update_user_settings(update.effective_user.id, lora_string=None)
+    await update.message.reply_text("🧹 LoRA-теги сброшены. Генерация пойдёт без них.")

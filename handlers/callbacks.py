@@ -65,7 +65,7 @@ async def apply_preset_callback(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
 
-# handlers/callbacks.py
+
 async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает текущие настройки через inline-кнопки (с учётом sampler/scheduler)"""
     query = update.callback_query
@@ -140,74 +140,89 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.edit_message_text("🎛 Главное меню:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Умная справка: показывает команды в зависимости от роли пользователя"""
-    user_id = update.effective_user.id
-    is_admin = user_id in config.ADMINS
-    msg = update.effective_message or update.message  # 🔒 Защита от NoneType
+    user = update.effective_user
+    if not user: return
 
-    # 🎨 Базовые команды (видят все)
-    text = (
-        "📚 **Справка по боту**\n\n"
-        "🎨 **Генерация:**\n"
-        "`/gen <промпт>` — создать изображение (писать на английском)\n"
-        "`/model` — выбрать нейросеть (модель)\n"
-        "`/vae` — выбрать декодер (решает проблемы с цветами/мылом)\n"
-        "`/preset` — меню пресетов: применить или создать через визард\n"
-        "`/preset_add` — 🚀 быстрое создание пресета в одну строку:\n"
-        "`/preset_add name=PonyV6 key=pony prefix=score_9, score_8_up, res=832x1216 steps=28 sampler=DPM++ 2M scheduler=karras prompt=masterpiece negative=bad hands`\n"
-        "`/settings` — текущие параметры генерации (CFG, sampler, размер)\n"
-        "`/cancel` — отменить мастер пресетов или зависшую задачу\n"
-        "`/start` — сбросить настройки пользователя (если застрял)\n"
-        "\n"
-        "🔍 **Справка по опциям:**\n"
-        "`/samplers` — показать доступные сэмплеры из Forge 🔄\n"
-        "`/schedulers` — показать доступные шедулеры из Forge 📅\n"
-        "\n"
-        "💳 **Баланс и оплата:**\n"
-        "`/balance` — проверить количество доступных генераций\n"
-        "`/buy` — купить пакет генераций за Telegram Stars ⭐\n"
-        "\n"
-        "📜 **История и поддержка:**\n"
-        "`/history` — твои последние 10 генераций\n"
-        "`/report` — если кредиты списались, но картинка не пришла\n"
-        "\n"
-        "💡 **Советы:**\n"
-        "• *Пиши промпты на английском (важно)*\n"
-        "• Для Pony V6 обязательно используй `prefix=score_9, score_8_up, score_7_up,`\n"
-        "• Размеры должны быть кратны 8 (например, 832×1216)\n"
+    is_admin = user.id in config.ADMINS
+    msg = update.effective_message or update.message
+
+    # 📦 Базовые команды (видят все)
+    sections = [
+        ("🎨 Генерация", [
+            "`/gen <промпт>` — создать изображение (пиши на английском)",
+            "`/model` — выбрать нейросеть",
+            "`/vae` — выбрать декодер (решает проблемы с цветами/мылом)",
+            "`/preset` — меню пресетов: применить или создать",
+            "`/preset_add` — 🚀 создание пресета в одну строку:\n"
+            "  `/preset_add name=Имя key=uniq_key res=832x1216 steps=28 sampler=DPM++ 2M scheduler=karras prefix=masterpiece negative=bad hands prompt=end or prompt`",
+            "`/settings` — текущие параметры генерации",
+            "`/loras` — показать доступные LoRA и готовые теги",
+            "`/lora_set <теги>` — сохранить LoRA для будущих генераций",
+            "`/lora_clear` — сбросить сохранённые LoRA",
+            "`/cancel` — отменить мастер пресетов или зависшую задачу",
+        ]),
+        ("🔍 Опции и справка", [
+            "`/samplers` — доступные сэмплеры из Forge",
+            "`/schedulers` — доступные шедулеры из Forge",
+        ]),
+        ("💳 Баланс и оплата", [
+            "`/balance` — проверить доступные генерации",
+            "`/buy` — купить пакет за Telegram Stars ⭐",
+        ]),
+        ("📜 История и поддержка", [
+            "`/history` — последние 10 генераций",
+            "`/report` — если кредиты списались, но картинка не пришла",
+            "`/start` — сбросить настройки пользователя",
+        ]),
+    ]
+
+    # 🔐 Админские команды (подмешиваются только админам)
+    admin_sections = [
+        ("🔐 Админ-панель", [
+            "`/ad_report <id> [стр]` — детальный отчёт по рекламе",
+            "`/ad_template` — шаблон CSV для загрузки рекламы",
+            "`/refresh_forge` — обновить кеш сэмплеров/шедулеров",
+        ]),
+        ("⚙️ Отладка", [
+            "`/unlimited <user_id>` — безлимитные генерации (тест)",
+            "`/ban <user_id>` — заблокировать пользователя",
+            "`/reset <user_id>` — сбросить лимиты",
+        ]),
+    ]
+
+    tips = [
+        "💡 *Советы:*",
+        "• Пиши промпты на английском (важно)",
+        "• Для Pony V6 обязательно `prefix=score_9, score_8_up, ...`",
+        "• Размеры должны быть кратны 8 (напр. 832×1216)",
         "• Реклама показывается после генерации — можно пропустить"
-    )
+    ]
 
-    # 🔐 Админские команды (видят только админы)
+    # 🛠 Сборка текста
+    lines = ["📚 **Справка по боту**\n"]
+    for title, cmds in sections:
+        lines.append(f"**{title}:**\n" + "\n".join(cmds) + "\n")
+
     if is_admin:
-        text += (
-            "\n\n"
-            "🔐 **Админ-панель**:\n"
-            "`/ad_report <id> [стр]` — детальный отчёт по рекламной кампании 📊\n"
-            "`/ad_template` — получить шаблон CSV для загрузки рекламы 📥\n"
-            "`/refresh_forge` — обновить кеш сэмплеров/шедулеров из Forge 🔄\n"
-            "*(Отправь заполненный .csv/.json файл — бот импортирует рекламу)*\n"
-            "\n"
-            "⚙️ **Отладка**:\n"
-            "`/unlimited <user_id>` — дать безлимитные генерации (тест)\n"
-            "`/ban <user_id>` — заблокировать пользователя\n"
-            "`/reset <user_id>` — сбросить лимиты пользователя\n"
-        )
+        lines.append("---\n")
+        for title, cmds in admin_sections:
+            lines.append(f"**{title}:**\n" + "\n".join(cmds) + "\n")
 
-    # 🎛 Кнопки быстрого доступа
+    lines.append("\n".join(tips))
+
+    # 🎛 Кнопки
     keyboard = [
         [InlineKeyboardButton("🎨 Выбрать модель", callback_data="select_model")],
         [InlineKeyboardButton("📚 Пресеты", callback_data="presets")],
-        [InlineKeyboardButton("⚙️ Настройки", callback_data="settings")]
+        [InlineKeyboardButton("⚙️ Настройки", callback_data="settings")],
+        [InlineKeyboardButton("🧩 LoRA", callback_data="loras_list")]  # Если есть коллбэк, иначе убери
     ]
-
     if is_admin:
         keyboard.append([InlineKeyboardButton("📊 Реклама: отчёт", callback_data="ad_page_1_1")])
 
     await msg.reply_text(
-        text,
+        "\n".join(lines),
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard),
         disable_web_page_preview=True

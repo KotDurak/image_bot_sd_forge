@@ -133,3 +133,8 @@ PROMPT_LANGUAGE_WARNING = (
 )
 
 EMAIL = os.getenv('EMAIL', '')
+HIDDEN_LORAS = {
+    x.strip().lower()
+    for x in os.getenv("FORGE_HIDDEN_LORAS", "").split(",")
+    if x.strip()
+}

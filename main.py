@@ -72,6 +72,7 @@ def register_handlers(app: Application):
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Document.ALL, presets.handle_wizard_text))
     app.add_handler(CallbackQueryHandler(callbacks.settings_callback, pattern="^settings$"))
     app.add_handler(CallbackQueryHandler(callbacks.main_menu_callback, pattern="^main_menu$"))
+    app.add_handler(CallbackQueryHandler(commands.loras_command, pattern="^loras_list$"))
 
     # admin
     app.add_handler(CommandHandler("unlimited", admins.unlimited_cmd))
@@ -96,6 +97,9 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("samplers", presets.list_samplers_cmd))
     app.add_handler(CommandHandler("schedulers", presets.list_schedulers_cmd))
     app.add_handler(CommandHandler("refresh_forge", presets.refresh_forge_options_cmd))
+    app.add_handler(CommandHandler("loras", commands.loras_command))
+    app.add_handler(CommandHandler("lora_set", commands.lora_set_command))
+    app.add_handler(CommandHandler("lora_clear", commands.lora_clear_command))
 
 
 def main():
