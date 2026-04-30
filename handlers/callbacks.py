@@ -155,7 +155,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             "`/vae` — выбрать декодер (решает проблемы с цветами/мылом)",
             "`/preset` — меню пресетов: применить или создать",
             "`/preset_add` — 🚀 создание пресета в одну строку:\n"
-            "  `/preset_add name=Имя key=uniq_key res=832x1216 steps=28 sampler=DPM++ 2M scheduler=karras prefix=masterpiece negative=bad hands prompt=end or prompt`",
+            "  `/preset_add name=Имя key=uniq_key res=832x1216 steps=28 cfg=5.0 sampler=DPM++ 2M scheduler=karras prefix=score_9, post_prompt=best quality negative=bad hands`",
+            "`/preset_update key=<ключ> [параметр=...]` — 🔄 обновить только переданные поля пресета",
             "`/settings` — текущие параметры генерации",
             "`/loras` — показать доступные LoRA и готовые теги",
             "`/lora_set <теги>` — сохранить LoRA для будущих генераций",
@@ -216,7 +217,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton("🎨 Выбрать модель", callback_data="select_model")],
         [InlineKeyboardButton("📚 Пресеты", callback_data="presets")],
         [InlineKeyboardButton("⚙️ Настройки", callback_data="settings")],
-        [InlineKeyboardButton("🧩 LoRA", callback_data="loras_list")]  # Если есть коллбэк, иначе убери
+        [InlineKeyboardButton("🧩 LoRA", callback_data="loras_list")]
     ]
     if is_admin:
         keyboard.append([InlineKeyboardButton("📊 Реклама: отчёт", callback_data="ad_page_1_1")])

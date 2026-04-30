@@ -69,6 +69,7 @@ def register_handlers(app: Application):
     app.add_handler(CallbackQueryHandler(callbacks.select_model_callback, pattern="^select_model$|^model_"))
     app.add_handler(CallbackQueryHandler(presets.preset_router, pattern="^preset|^presets"))
     app.add_handler(CommandHandler("preset_add", presets.quick_preset_cmd))
+    app.add_handler(CommandHandler('preset_update', presets.preset_update_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Document.ALL, presets.handle_wizard_text))
     app.add_handler(CallbackQueryHandler(callbacks.settings_callback, pattern="^settings$"))
     app.add_handler(CallbackQueryHandler(callbacks.main_menu_callback, pattern="^main_menu$"))

@@ -45,6 +45,25 @@ async def add_user_preset(
             return False
         raise  # перекидываем другие ошибки выше
 
+async def update_user_preset(user_id: int, preset_key: str, **kwargs) -> bool:
+    allowed_fields = ["name", "width", "height", "steps", "cfg_scale", "sampler", "scheduler",
+                      "prompt_prefix", "prompt_suffix", "negative_suffix"]
+    updates = {k: v for k, v in kwargs.items() if k in allowed_fields}
+    if not updates: return False
+
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [user_id, preset_key]
+
+    try:
+        await async_db.conn.execute(f"UPDATE user_preset SET {set_clause} WHERE user_id=? AND preset_key=?", values)
+        await async_db.conn.commit()
+        logger.info(f"✅ Пресет '{preset_key}' обновлен")
+        return True
+    except Exception as e:
+        if "UNIQUE constraint failed" in str(e):
+            logger.warning("Ошибка при обновлении пресета")
+            return False
+        raise  # перекидываем другие ошибки выше
 
 async def get_user_preset(user_id: int, preset_key: str) -> Optional[Dict[str, Any]]:
     """

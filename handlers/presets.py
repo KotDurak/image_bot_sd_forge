@@ -3,12 +3,26 @@ import telegram
 import logging
 from telegram.ext import ContextTypes
 import config
-from models.users_presets import add_user_preset, list_user_presets, get_user_preset
+from models.users_presets import add_user_preset, list_user_presets, get_user_preset, update_user_preset
 from models.user_state import update_user_settings, get_user_settings
 from config import PRESETS
 from services.forge_options import ForgeOptionsCache
+from utils.parsers import parse_key_value_args
 
 logger = logging.getLogger(__name__)
+
+# 🎛 КОНСТАНТЫ ВАЛИДАЦИИ ПРЕСЕТОВ
+# Меняйте тут — лимиты и текст ошибок обновятся везде автоматически
+PRESET_LIMITS = {
+    "name_max_len": 30,
+    "res_min": 256,
+    "res_max": 1344,
+    "res_divisor": 8,
+    "steps_min": 1,
+    "steps_max": 50,     # 🔴 Максимум: защита от перегрузки GPU
+    "cfg_min": 1.0,
+    "cfg_max": 30.0
+}
 
 # Шаги мастера (теперь 10)
 (STEP_NAME, STEP_KEY, STEP_PROMPT, STEP_NEGATIVE, STEP_RESOLUTION,
@@ -58,7 +72,7 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         _wizard_state[user_id] = {"step": STEP_NAME, "data": {}}
         await query.edit_message_text(
             "🎨 <b>Создание пресета</b>\n\n"
-            "Шаг 1/10: Введите <b>название</b> (до 30 символов):\n"
+            f"Шаг 1/10: Введите <b>название</b> (до {PRESET_LIMITS['name_max_len']} символов):\n"
             "↩️ <code>/cancel</code> — отменить",
             parse_mode="HTML"
         )
@@ -86,8 +100,8 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         _wizard_state[user_id]["data"]["steps"] = int(data.split(":")[1])
         _wizard_state[user_id]["step"] = STEP_CFG
         await query.message.reply_text(
-            "Шаг 7/10: <b>CFG Scale</b> (влияет на соответствие промпту):\n"
-            "Обычно <code>5.0</code>–<code>8.0</code>. Оставьте <code>7.0</code>, если не уверены.\n"
+            f"Шаг 7/10: <b>CFG Scale</b> (влияет на соответствие промпту):\n"
+            f"Обычно <code>{PRESET_LIMITS['cfg_min']:.1f}</code>–<code>{PRESET_LIMITS['cfg_max']:.1f}</code>. Оставьте <code>7.0</code>, если не уверены.\n"
             "Отправьте число:",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Назад", callback_data="preset_step_back")]]),
             parse_mode="HTML"
@@ -140,7 +154,7 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif current == STEP_SAMPLER:
             _wizard_state[user_id]["step"] = STEP_CFG
             await query.edit_message_text(
-                "Шаг 7/10: <b>CFG Scale</b> (5.0–8.0):\nОтправьте число:",
+                f"Шаг 7/10: <b>CFG Scale</b> ({PRESET_LIMITS['cfg_min']:.1f}–{PRESET_LIMITS['cfg_max']:.1f}):\nОтправьте число:",
                 reply_markup=InlineKeyboardMarkup(
                     [[InlineKeyboardButton("⬅️ Назад", callback_data="preset_step_back")]]),
                 parse_mode="HTML"
@@ -197,9 +211,24 @@ async def _show_presets_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
     kb.append([InlineKeyboardButton("➕ Создать свой", callback_data="preset_create_start")])
     kb.append([InlineKeyboardButton("❌ Назад", callback_data="main_menu")])
 
+    # 🔑 Формируем блок с ключами для быстрого копирования
+    if custom_presets:
+        keys_block = "🔑 <b>Ваши ключи для /preset_update:</b>\n" + \
+                     "\n".join(f"• <code>{p['preset_key']}</code> → {p['name']}" for p in custom_presets) + "\n"
+    else:
+        keys_block = "🔑 Своих пресетов пока нет.\n"
+
+    msg_text = (
+        "🎨 <b>Выберите стиль генерации</b>:\n"
+        "Активный стиль автоматически применяется к <code>/gen</code>\n\n"
+        f"{keys_block}"
+        "💡 Чтобы изменить пресет без удаления:\n"
+        "<code>/preset_update key=... steps=30 cfg=6.0</code>"
+    )
+
     try:
         await query.edit_message_text(
-            "🎨 <b>Выберите стиль генерации</b>:\nАктивный стиль автоматически применяется к /gen",
+            msg_text,
             reply_markup=InlineKeyboardMarkup(kb),
             parse_mode="HTML"
         )
@@ -222,8 +251,8 @@ async def handle_wizard_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     step = state["step"]
 
     if step == STEP_NAME:
-        if not text or len(text) > 30:
-            await update.message.reply_text("❌ Название: 1-30 символов.")
+        if not text or len(text) > PRESET_LIMITS["name_max_len"]:
+            await update.message.reply_text(f"❌ Название: 1-{PRESET_LIMITS['name_max_len']} символов.")
             return
         state["data"]["name"] = text
         state["step"] = STEP_KEY
@@ -269,7 +298,7 @@ async def handle_wizard_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif step == STEP_CFG:
         try:
             cfg = float(text.replace(',', '.'))
-            if not (1.0 <= cfg <= 30.0): raise ValueError
+            if not (PRESET_LIMITS["cfg_min"] <= cfg <= PRESET_LIMITS["cfg_max"]): raise ValueError
             state["data"]["cfg_scale"] = cfg
             state["step"] = STEP_SAMPLER
 
@@ -285,7 +314,7 @@ async def handle_wizard_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 reply_markup=InlineKeyboardMarkup(kb), parse_mode="HTML"
             )
         except ValueError:
-            await update.message.reply_text("❌ Введите число от 1.0 до 30.0 (например, 7.0)")
+            await update.message.reply_text(f"❌ Введите число от {PRESET_LIMITS['cfg_min']:.1f} до {PRESET_LIMITS['cfg_max']:.1f} (например, 7.0)")
             return
 
 
@@ -337,7 +366,6 @@ async def cancel_wizard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def quick_preset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """🚀 Быстрое создание пресета в одну строку с валидацией"""
-    # 🔥 FIX: effective_message работает с командами, колбэками и edited messages
     msg = update.effective_message
     if not msg:
         return
@@ -346,38 +374,28 @@ async def quick_preset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     if not context.args:
         await msg.reply_text(
             "❌ Использование:\n"
-            "`/preset_add name=<str> key=<str> [prefix=...] [res=WxH] [steps=N] [cfg=N] [sampler=...] [scheduler=...] [prompt=...] [negative=...]`\n"
+            "`/preset_add name=<str> key=<str> [prefix=...] [res=WxH] [steps=N] [cfg=N] [sampler=...] [scheduler=...] [post_prompt=...] [negative=...]`\n"
             "💡 `prefix` добавляется в НАЧАЛО промпта (важно для Pony: score_9, ...)\n"
-            "💡 `prompt` добавляется в КОНЕЦ промпта пользователя.",
+            "💡 `post_prompt` добавляется в КОНЕЦ промпта пользователя.",
             parse_mode="Markdown"
         )
         return
 
     # 🔍 Парсинг аргументов
-    args = {}
-    current_key = None
-    try:
-        for arg in context.args:
-            if '=' in arg:
-                key, val = arg.split('=', 1)
-                args[key.lower().strip()] = val.strip()
-                current_key = key.lower().strip()
-            elif current_key is not None:
-                args[current_key] += ' ' + arg
-            else:
-                await msg.reply_text(f"❌ Неверный формат: `{arg}`. Ожидается `ключ=значение`")
-                return
-        for k in args:
-            args[k] = args[k].strip().strip("\"'").strip()
-    except Exception:
-        await msg.reply_text("❌ Ошибка парсинга. Проверьте формат `ключ=значение`")
+    ALLOWED_KEYS_ADD = {
+        "name", "key", "prefix", "res", "steps", "cfg",
+        "sampler", "scheduler", "post_prompt", "negative"
+    }
+    args, error = await parse_key_value_args(context, allowed_keys=ALLOWED_KEYS_ADD)
+    if error:
+        await msg.reply_text(error)
         return
 
     # 📋 Обязательные поля
     name = args.get("name")
     key = args.get("key")
-    if not name or len(name) > 30:
-        await msg.reply_text("❌ `name` обязателен (1-30 символов)")
+    if not name or len(name) > PRESET_LIMITS["name_max_len"]:
+        await msg.reply_text(f"❌ `name` обязателен (1-{PRESET_LIMITS['name_max_len']} символов)")
         return
     if not key or not all(c.isalnum() or c == '_' for c in key.lower()):
         await msg.reply_text("❌ `key` обязателен (латиница, цифры, _)")
@@ -391,30 +409,31 @@ async def quick_preset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     res_str = args.get("res", "512x768")
     try:
         w, h = map(int, res_str.split("x"))
-        if w % 8 != 0 or h % 8 != 0:
-            raise ValueError("Кратно 8")
-        if not (256 <= w <= 1344 and 256 <= h <= 1344):
-            raise ValueError("Диапазон 256-2048")
+        if w % PRESET_LIMITS["res_divisor"] != 0 or h % PRESET_LIMITS["res_divisor"] != 0:
+            raise ValueError(f"Кратно {PRESET_LIMITS['res_divisor']}")
+        if not (PRESET_LIMITS["res_min"] <= w <= PRESET_LIMITS["res_max"] and
+                PRESET_LIMITS["res_min"] <= h <= PRESET_LIMITS["res_max"]):
+            raise ValueError(f"Диапазон {PRESET_LIMITS['res_min']}-{PRESET_LIMITS['res_max']}")
     except ValueError as e:
-        await msg.reply_text(f"❌ `res` в формате `WxH`, кратно 8, диапазон 256-2048. ({e})")
+        await msg.reply_text(f"❌ `res` в формате `WxH`, кратно {PRESET_LIMITS['res_divisor']}, диапазон {PRESET_LIMITS['res_min']}-{PRESET_LIMITS['res_max']}. ({e})")
         return
 
     # 🔢 Шаги
     try:
         steps = int(args.get("steps", "28"))
-        if not (10 <= steps <= 50):
+        if not (PRESET_LIMITS["steps_min"] <= steps <= PRESET_LIMITS["steps_max"]):
             raise ValueError
     except ValueError:
-        await msg.reply_text("❌ `steps`: целое число от 10 до 50")
+        await msg.reply_text(f"❌ `steps`: целое число от {PRESET_LIMITS['steps_min']} до {PRESET_LIMITS['steps_max']}")
         return
 
     # ⚖️ CFG
     try:
         cfg = float(args.get("cfg", "7.0").replace(",", "."))
-        if not (1.0 <= cfg <= 30.0):
+        if not (PRESET_LIMITS["cfg_min"] <= cfg <= PRESET_LIMITS["cfg_max"]):
             raise ValueError
     except ValueError:
-        await msg.reply_text("❌ `cfg`: число от 1.0 до 30.0")
+        await msg.reply_text(f"❌ `cfg`: число от {PRESET_LIMITS['cfg_min']:.1f} до {PRESET_LIMITS['cfg_max']:.1f}")
         return
 
     await ForgeOptionsCache.ensure_loaded()
@@ -434,9 +453,22 @@ async def quick_preset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     sched_final = next((s for s in ForgeOptionsCache.get_schedulers() if s.lower() == sched_in.lower()), sched_in)
 
     # 📝 Промпты
-    prompt_prefix = args.get("prefix", "")
-    prompt_suffix = f", {args['prompt']}" if "prompt" in args else ""
-    negative = args.get("negative", "")
+    prompt_prefix = args.get("prefix", "").strip()
+    post_prompt_raw = args.get("post_prompt", "").strip()
+    prompt_suffix = f", {post_prompt_raw}" if post_prompt_raw else ""
+    negative = args.get("negative", "").strip()
+
+    # 📋 Формируем полную строку команды (все параметры в порядке справки)
+    cmd_template = [
+        f"name={name}", f"key={key.lower()}",
+        f"prefix={prompt_prefix}", f"res={w}x{h}",
+        f"steps={steps}", f"cfg={cfg}",
+        f"sampler={sampler_final}", f"scheduler={sched_final}",
+        f"post_prompt={post_prompt_raw}", f"negative={negative}"
+    ]
+    # Оставляем только непустые значения, сохраняя порядок
+    cmd_parts = [p for p in cmd_template if p.split('=', 1)[1]]
+    full_command = f"`/preset_add {' '.join(cmd_parts)}`"
 
     # 💾 Сохранение
     success = await add_user_preset(
@@ -454,6 +486,7 @@ async def quick_preset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             f"🔄 {sampler_final} | 📅 {sched_final}\n"
             f"🟢 Префикс: `{prompt_prefix or '—'}`\n"
             f"🔴 Суффикс: `{prompt_suffix or '—'}`\n\n"
+            f"📋 Точная команда для проверки:\n{full_command}\n\n"
             f"Активируйте: `/preset` → `🔑 {key.lower()}`",
             parse_mode="Markdown"
         )
@@ -487,3 +520,134 @@ async def refresh_forge_options_cmd(update: Update, context: ContextTypes.DEFAUL
         f"🔄 Сэмплеров: {len(ForgeOptionsCache.get_samplers())}\n"
         f"📅 Шедулеров: {len(ForgeOptionsCache.get_schedulers())}"
     )
+
+async def preset_update_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """🔄 Обновление существующего пресета (только переданные параметры)"""
+    msg = update.effective_message
+    if not msg: return
+    if not context.args:
+        await msg.reply_text(
+            "❌ Использование:\n"
+            "`/preset_update key=<ключ> [name=...] [res=...] [steps=...] [cfg=...] [sampler=...] [scheduler=...] [prefix=...] [post_prompt=...] [negative=...]`\n"
+            "💡 Укажите `key` и только те параметры, которые хотите изменить."
+        )
+        return
+
+    user_id = update.effective_user.id
+
+    # 🔍 Парсинг (тот же, что в preset_add)
+    ALLOWED_KEYS_UPDATE = {
+        "key", "name", "res", "steps", "cfg",
+        "sampler", "scheduler", "prefix", "post_prompt", "negative"
+    }
+    args, error = await parse_key_value_args(context, allowed_keys=ALLOWED_KEYS_UPDATE)
+    if error:
+        await msg.reply_text(error)
+        return
+    if "key" not in args:
+        await msg.reply_text("❌ `key` обязателен")
+        return
+
+    key = args.get("key")
+    if not key:
+        await msg.reply_text("❌ `key` обязателен для обновления")
+        return
+
+    # 📦 Загружаем текущий пресет
+    existing = await get_user_preset(user_id, key.lower())
+    if not existing:
+        await msg.reply_text(f"❌ Пресет `{key}` не найден")
+        return
+
+    # 🔄 Базовые значения из БД
+    name = existing.get("name", key)
+    w, h = existing.get("width", 512), existing.get("height", 768)
+    steps = existing.get("steps", 28)
+    cfg = existing.get("cfg_scale", 7.0)
+    sampler = existing.get("sampler", "DPM++ 2M")
+    scheduler = existing.get("scheduler", "karras")
+    prefix = existing.get("prompt_prefix", "")
+    post_prompt = existing.get("prompt_suffix", "").lstrip(", ").strip()
+    negative = existing.get("negative_suffix", "")
+
+    # ✅ Применяем и валидируем ТОЛЬКО переданные параметры
+    if "name" in args:
+        if len(args["name"]) > PRESET_LIMITS["name_max_len"]:
+            await msg.reply_text(f"❌ `name` макс {PRESET_LIMITS['name_max_len']} символов"); return
+        name = args["name"]
+
+    if "res" in args:
+        try:
+            w, h = map(int, args["res"].split("x"))
+            if w % PRESET_LIMITS["res_divisor"] != 0 or h % PRESET_LIMITS["res_divisor"] != 0: raise ValueError(f"Кратно {PRESET_LIMITS['res_divisor']}")
+            if not (PRESET_LIMITS["res_min"] <= w <= PRESET_LIMITS["res_max"] and
+                    PRESET_LIMITS["res_min"] <= h <= PRESET_LIMITS["res_max"]): raise ValueError(f"Диапазон {PRESET_LIMITS['res_min']}-{PRESET_LIMITS['res_max']}")
+        except ValueError as e:
+            await msg.reply_text(f"❌ `res` ошибка: {e}"); return
+
+    if "steps" in args:
+        try:
+            steps = int(args["steps"])
+            if not (PRESET_LIMITS["steps_min"] <= steps <= PRESET_LIMITS["steps_max"]): raise ValueError
+        except ValueError:
+            await msg.reply_text(f"❌ `steps`: {PRESET_LIMITS['steps_min']}-{PRESET_LIMITS['steps_max']}"); return
+
+    if "cfg" in args:
+        try:
+            cfg = float(args["cfg"].replace(",", "."))
+            if not (PRESET_LIMITS["cfg_min"] <= cfg <= PRESET_LIMITS["cfg_max"]): raise ValueError
+        except ValueError:
+            await msg.reply_text(f"❌ `cfg`: {PRESET_LIMITS['cfg_min']:.1f}-{PRESET_LIMITS['cfg_max']:.1f}"); return
+
+    await ForgeOptionsCache.ensure_loaded()
+
+    if "sampler" in args:
+        if not ForgeOptionsCache.is_valid_sampler(args["sampler"]):
+            await msg.reply_text(f"❌ Неизвестный `sampler`"); return
+        sampler = next((s for s in ForgeOptionsCache.get_samplers() if s.lower() == args["sampler"].lower()), args["sampler"])
+
+    if "scheduler" in args:
+        if not ForgeOptionsCache.is_valid_scheduler(args["scheduler"]):
+            await msg.reply_text(f"❌ Неизвестный `scheduler`"); return
+        scheduler = next((s for s in ForgeOptionsCache.get_schedulers() if s.lower() == args["scheduler"].lower()), args["scheduler"])
+
+    if "prefix" in args: prefix = args["prefix"]
+    if "post_prompt" in args: post_prompt = args["post_prompt"]
+    if "negative" in args: negative = args["negative"]
+
+    prompt_suffix = f", {post_prompt}" if post_prompt else ""
+
+    # 💾 Сохраняем
+    success = await update_user_preset(
+        user_id=user_id, preset_key=key.lower(), name=name,
+        width=w, height=h, steps=steps, cfg_scale=cfg,
+        sampler=sampler, scheduler=scheduler,
+        prompt_prefix=prefix, prompt_suffix=prompt_suffix, negative_suffix=negative
+    )
+
+    # 📋 Генерация команды для копирования (только изменённые + обязательный key)
+    cmd_parts = [f"key={key.lower()}"]
+    if "name" in args: cmd_parts.append(f"name={name}")
+    if "res" in args: cmd_parts.append(f"res={w}x{h}")
+    if "steps" in args: cmd_parts.append(f"steps={steps}")
+    if "cfg" in args: cmd_parts.append(f"cfg={cfg}")
+    if "sampler" in args: cmd_parts.append(f"sampler={sampler}")
+    if "scheduler" in args: cmd_parts.append(f"scheduler={scheduler}")
+    if "prefix" in args: cmd_parts.append(f"prefix={prefix}")
+    if "post_prompt" in args: cmd_parts.append(f"post_prompt={post_prompt}")
+    if "negative" in args: cmd_parts.append(f"negative={negative}")
+    full_command = f"`/preset_update {' '.join(cmd_parts)}`"
+
+    if success:
+        await msg.reply_text(
+            f"✅ Пресет обновлён!\n"
+            f"🔑 `{key.lower()}` | 🏷️ `{name}`\n"
+            f"📐 {w}x{h} | 🔢 {steps} | ⚖️ {cfg}\n"
+            f"🔄 {sampler} | 📅 {scheduler}\n"
+            f"🟢 Префикс: `{prefix or '—'}`\n"
+            f"🔴 Суффикс: `{prompt_suffix or '—'}`\n\n"
+            f"📋 Команда для повтора/проверки:\n{full_command}",
+            parse_mode="Markdown"
+        )
+    else:
+        await msg.reply_text("❌ Ошибка при сохранении (проверьте логи)")

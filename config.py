@@ -138,3 +138,14 @@ HIDDEN_LORAS = {
     for x in os.getenv("FORGE_HIDDEN_LORAS", "").split(",")
     if x.strip()
 }
+
+PRESET_LIMITS = {
+    "steps_min": 1,          # Минимум: хозяин барин
+    "steps_max": 50,         # Максимум: защита от перегрузки GPU
+    "cfg_min": 1.0,          # Минимальный CFG
+    "cfg_max": 30.0,         # Максимальный CFG
+    "res_min": 256,          # Мин. сторона разрешения
+    "res_max": 1344,         # Макс. сторона (поменяйте на 2048, если Forge тянет)
+    "name_max_len": 30,      # Макс. длина имени пресета
+    "divisor": 8             # Шаг кратности разрешения
+}
