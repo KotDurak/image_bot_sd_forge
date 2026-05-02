@@ -7,12 +7,6 @@
 from typing import Dict
 
 PACKAGES: Dict[str, dict] = {
-    "test_1": {
-        "stars": 1,
-        "credits": 1,
-        "label": "🧪 Тестовая генерация (1 ⭐)",
-        "desc": "Для отладки платежей"
-    },
     "starter": {
         "stars": 2,
         "credits": 1,
