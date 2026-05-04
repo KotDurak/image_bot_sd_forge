@@ -32,8 +32,8 @@ DEFAULTS = {
     "cfg_scale": 1.5,              # Низкий CFG = меньше артефактов
     "width": 832,                  # SDXL-родное разрешение (вертикаль)
     "height": 1216,
-    "negative_prompt": "blurry, lowres, bad anatomy, bad hands, text, watermark, ugly, deformed, noisy",
-    "sampler_name": "DPM++ 2M",
+    "negative_prompt": "(extra limbs, extra legs, extra arms, duplicate, multiple people, deformed, bad anatomy, bad hands:1.2), lowres, blurry, watermark",
+    "sampler_name": "DPM++ SDE",
     "scheduler": "karras",
 }
 
