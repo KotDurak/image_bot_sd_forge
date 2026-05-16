@@ -38,9 +38,9 @@ def call_forge_api(payload: dict) -> bytes | None:
     url = f"{config.FORGE_URL}/sdapi/v1/txt2img"
     start = time.time()
     try:
-        import json
-        logger.error(f"📤 FINAL PAYLOAD TO FORGE:\n{json.dumps(payload, indent=2, ensure_ascii=False)[:1500]}")
-        logger.info(f"🔗 POST {url} | prompt: {payload.get('prompt', '')[:50]}...")
+      #import json
+      #logger.error(f"📤 FINAL PAYLOAD TO FORGE:\n{json.dumps(payload, indent=2, ensure_ascii=False)[:1500]}")
+       #logger.info(f"🔗 POST {url} | prompt: {payload.get('prompt', '')[:50]}...")
         response = requests.post(
             url,
             json=payload,
