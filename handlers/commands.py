@@ -33,7 +33,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     keyboard = [
         [InlineKeyboardButton('🎨 Выбрать модель', callback_data="select_model")],
-        [InlineKeyboardButton('🔧 Выбрать VAE', callback_data="select_vae")],
         [InlineKeyboardButton("⚙️ Настройки", callback_data="settings")],
         [InlineKeyboardButton("📚 Пресеты", callback_data="presets")],
         [InlineKeyboardButton("📖 Гайд для новичка", url="https://telegra.ph/Minigajd-po-risovaniyu-05-16")]  # 🔥 Новая кнопка
