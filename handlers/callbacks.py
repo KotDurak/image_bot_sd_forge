@@ -142,7 +142,8 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not user: return
+    if not user:
+        return
 
     is_admin = user.id in config.ADMINS
     msg = update.effective_message or update.message
@@ -170,6 +171,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ("💳 Баланс и оплата", [
             "`/balance` — проверить доступные генерации",
             "`/buy` — купить пакет за Telegram Stars ⭐",
+            "🔄 *Ежедневный бонус:* Если осталось < 2 бесплатных генераций, баланс автоматически пополняется до 2 каждые 24 часа."
         ]),
         ("📜 История и поддержка", [
             "`/history` — последние 10 генераций",

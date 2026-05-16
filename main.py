@@ -12,11 +12,15 @@ import logging
 import asyncio
 from utils.logger import setup_logging
 from services.forge_options import ForgeOptionsCache
+import os
 
 setup_logging(config.MODE, logs_dir=config.LOGS_DIR)
 queue_manager = GenerationQueue()
 
 logger = logging.getLogger(__name__)
+
+os.environ['NO_PROXY'] = '127.0.0.1,localhost'
+os.environ['no_proxy'] = '127.0.0.1,localhost'
 
 async def post_init(app: Application):
     """Асинхронная инициализация: БД, очередь, логирование"""

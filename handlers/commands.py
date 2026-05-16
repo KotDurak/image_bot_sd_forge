@@ -37,9 +37,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         f"👋 Привет, {user.first_name}!\n\n"
         "🎨 Я — твой помощник для генерации картинок через Forge.\n\n"
+        "💰 *Ежедневный бонус:* Если осталось меньше 2 бесплатных генераций, баланс автоматически пополняется до 2 каждый день.\n\n"
         "📝 Напиши промпт или используй команды:\n"
         "/gen <промпт> — сгенерировать\n"
-        "/model — модель | /vae — декодер | /preset — стиль",
+        "/model — модель | /vae — декодер | /preset — стиль \n"
+        "Политика конфеденциальности https://telegra.ph/Politika-konfidencialnosti-04-01-26" ,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -145,10 +147,11 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     s = await get_user_settings(user.id)
     preset_key = s.get("preset")
     p = await get_user_preset(user.id, preset_key) if (preset_key and preset_key not in config.PRESETS) else None
+    if not p:
+        p = config.PRESETS.get(preset_key)
 
     def cfg(key, fallback=""):
         return p.get(key, config.DEFAULTS.get(key, fallback)) if p else config.DEFAULTS.get(key, fallback)
-
     info = {
         "🧠 Модель": s.get("model") or "default",
         "🎨 Пресет": preset_key or "нет",

@@ -59,10 +59,16 @@ PRESETS = {
         "width": 768, "height": 512, "steps": 25
     },
     "anime_art": {
-        "name": "🎨 Аниме-арт",
-        "prompt_suffix": ", anime style, detailed eyes, vibrant colors, masterpiece",
-        "negative_suffix": ", realistic, photo, 3d render",
-        "width": 512, "height": 768, "steps": 28
+        "name": "🎨 Аниме-арт (PonyBase)",  # Имя для меню, можно вернуть просто "🎨 Аниме-арт"
+        "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime",
+        "prompt_suffix": ", masterpiece, highly detailed",
+        "negative_suffix": "score_4, score_5, score_6, source_furry, low quality, bad anatomy, text, watermark, blurry",
+        "width": 832,
+        "height": 1216,
+        "steps": 28,
+        "cfg_scale": 7.0,
+        "sampler": "DPM++ 2M",
+        "scheduler": "karras"
     },
 }
 
