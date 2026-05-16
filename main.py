@@ -2,7 +2,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
     PreCheckoutQueryHandler
 from telegram import Update
 from telegram.request import HTTPXRequest
-from handlers import payments, commands, callbacks, presets, admins, ad_management
+from handlers import payments, commands, callbacks, presets, admins, ad_management,platega_handler
 from db.async_core import async_db
 from handlers.callbacks import cb_vae_select
 from handlers.commands import vae_command
@@ -94,6 +94,10 @@ def register_handlers(app: Application):
     app.add_handler(CallbackQueryHandler(payments.process_purchase_callback, pattern="^buy_"))
     app.add_handler(CommandHandler("balance", payments.balance_cmd))
     app.add_handler(CommandHandler("report", payments.report_cmd))
+
+    app.add_handler(CallbackQueryHandler(platega_handler.platega_menu_cmd, pattern="^platega_menu$"))
+    app.add_handler(CallbackQueryHandler(platega_handler.start_platega_payment, pattern="^pkg_"))  # 🔥 pkg_
+    app.add_handler(CallbackQueryHandler(platega_handler.check_platega_status, pattern="^pay_"))  # 🔥 pay_
 
     # ⭐ Обязательные хендлеры для Telegram Payments API
     app.add_handler(PreCheckoutQueryHandler(payments.pre_checkout_callback))

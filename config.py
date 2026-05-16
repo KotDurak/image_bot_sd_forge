@@ -20,22 +20,37 @@ API_AUTH = (API_USER, API_PASS) if API_USER and API_PASS else None
 
 # 👥 Доступ
 ALLOWED_USERS = {
-    int(uid) for uid in os.getenv("ALLOWED_USERS", "").split(",") if uid.strip()
-} | {ADMIN_USER_ID}
+                    int(uid) for uid in os.getenv("ALLOWED_USERS", "").split(",") if uid.strip()
+                } | {ADMIN_USER_ID}
 
 # 🎛 Режим работы: "DEV" или "PROD"
 MODE = os.getenv("MODE", "PROD").upper()
 
-# 🎨 Дефолты генерации
-DEFAULTS = {
-    "steps": 6,                    # Lightning любит быстро
-    "cfg_scale": 1.5,              # Низкий CFG = меньше артефактов
-    "width": 832,                  # SDXL-родное разрешение (вертикаль)
-    "height": 1216,
-    "negative_prompt": "(extra limbs, extra legs, extra arms, duplicate, multiple people, deformed, bad anatomy, bad hands:1.2), lowres, blurry, watermark",
-    "sampler_name": "DPM++ SDE",
-    "scheduler": "karras",
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "boleromixPony_v233")
+SETTING_MODEL_MAP = {
+    "juggernautXL_v9Rdphoto2Lightning": {
+        "steps": 6,  # Lightning любит быстро
+        "cfg_scale": 1.5,  # Низкий CFG = меньше артефактов
+        "width": 832,  # SDXL-родное разрешение (вертикаль)
+        "height": 1216,
+        "negative_prompt": "(extra limbs, extra legs, extra arms, duplicate, multiple people, deformed, bad anatomy, bad hands:1.2), lowres, blurry, watermark",
+        "sampler_name": "DPM++ SDE",
+        "scheduler": "karras",
+    },
+    "boleromixPony_v233": {
+        "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime",
+        "prompt_suffix": ", masterpiece, highly detailed",
+        "negative_prompt": "score_4, score_5, score_6, source_furry, low quality, bad anatomy, text, watermark, blurry",
+        "width": 832,
+        "height": 1216,
+        "steps": 28,
+        "cfg_scale": 7.0,
+        "sampler_name": "DPM++ 2M",
+        "scheduler": "karras"
+    }
 }
+
+DEFAULTS = SETTING_MODEL_MAP[DEFAULT_MODEL]
 
 # 🖼 Модели
 MODELS = {
@@ -46,18 +61,6 @@ MODELS = {
 
 # 🎭 Пресеты
 PRESETS = {
-    "portrait": {
-        "name": "📸 Портрет",
-        "prompt_suffix": ", portrait, detailed face, soft lighting, studio",
-        "negative_suffix": ", deformed, ugly, bad proportions",
-        "width": 512, "height": 768, "steps": 30
-    },
-    "cityscape": {
-        "name": "🌆 Город",
-        "prompt_suffix": ", cityscape, neon lights, cyberpunk, detailed background",
-        "negative_suffix": ", blurry, empty, low detail",
-        "width": 768, "height": 512, "steps": 25
-    },
     "anime_art": {
         "name": "🎨 Аниме-арт (PonyBase)",  # Имя для меню, можно вернуть просто "🎨 Аниме-арт"
         "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime",
@@ -70,6 +73,18 @@ PRESETS = {
         "sampler": "DPM++ 2M",
         "scheduler": "karras"
     },
+    "realism": {
+        "name": "📸 Реализм (Juggernaut)",
+        "prompt_prefix": "",
+        "prompt_suffix": ", masterpiece, best quality, detailed skin, soft lighting",
+        "negative_suffix": "(extra limbs, extra legs, extra arms, duplicate, multiple people, deformed, bad anatomy, bad hands:1.2), lowres, blurry, watermark, text, signature",
+        "width": 832,
+        "height": 1216,
+        "steps": 6,  # ⚡ Lightning любит быстро
+        "cfg_scale": 1.5,  # 🔥 Низкий CFG для реализма
+        "sampler": "DPM++ SDE",
+        "scheduler": "karras"
+    }
 }
 
 SAMPLERS = {
@@ -146,12 +161,16 @@ HIDDEN_LORAS = {
 }
 
 PRESET_LIMITS = {
-    "steps_min": 1,          # Минимум: хозяин барин
-    "steps_max": 50,         # Максимум: защита от перегрузки GPU
-    "cfg_min": 1.0,          # Минимальный CFG
-    "cfg_max": 30.0,         # Максимальный CFG
-    "res_min": 256,          # Мин. сторона разрешения
-    "res_max": 1344,         # Макс. сторона (поменяйте на 2048, если Forge тянет)
-    "name_max_len": 30,      # Макс. длина имени пресета
-    "divisor": 8             # Шаг кратности разрешения
+    "steps_min": 1,  # Минимум: хозяин барин
+    "steps_max": 50,  # Максимум: защита от перегрузки GPU
+    "cfg_min": 1.0,  # Минимальный CFG
+    "cfg_max": 30.0,  # Максимальный CFG
+    "res_min": 256,  # Мин. сторона разрешения
+    "res_max": 1344,  # Макс. сторона (поменяйте на 2048, если Forge тянет)
+    "name_max_len": 30,  # Макс. длина имени пресета
+    "divisor": 8  # Шаг кратности разрешения
 }
+
+PLATEGA_API_URL = "https://app.platega.io"
+PLATEGA_MERCHANT_ID = os.getenv("PLATEGA_MERCHANT_ID")
+PLATEGA_API_KEY = os.getenv("PLATEGA_API_KEY")

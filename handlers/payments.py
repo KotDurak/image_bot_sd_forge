@@ -19,6 +19,7 @@ async def buy_credits_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f"buy_{key}"
             )
         ])
+    keyboard.append([InlineKeyboardButton("💳 Карта/СБП (Platega)", callback_data="platega_menu")])
     keyboard.append([InlineKeyboardButton("❌ Отмена", callback_data="main_menu")])
 
     await update.message.reply_text(

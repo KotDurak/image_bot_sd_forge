@@ -1,1 +1,0 @@
-ALTER TABLE ad_campaigns ADD COLUMN shown_count INTEGER DEFAULT 0;

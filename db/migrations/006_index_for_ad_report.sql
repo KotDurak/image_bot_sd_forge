@@ -1,1 +1,0 @@
-CREATE INDEX idx_ad_log_lookup ON ad_impressions_log(ad_id, shown_at DESC);

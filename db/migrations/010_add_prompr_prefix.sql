@@ -1,1 +1,0 @@
-ALTER TABLE user_preset ADD COLUMN prompt_prefix TEXT DEFAULT ''

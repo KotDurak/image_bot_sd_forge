@@ -14,6 +14,7 @@ from services.payload_builder import build_generation_payload
 from services.generation_pipeline import check_user_limits, submit_to_queue
 from utils.prompt_utils import extract_prompt, prepare_prompt
 import html
+from models.user_quota import _get_or_create_quota, add_paid_credits  # ✅ Только здесь!
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,8 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # === КОМАНДЫ ==================================================================
 # =============================================================================
+# В начало файла (импорты) — если ещё нет:
+# from models.user_quota import _get_or_create_quota, add_paid_credits
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -32,19 +35,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton('🎨 Выбрать модель', callback_data="select_model")],
         [InlineKeyboardButton('🔧 Выбрать VAE', callback_data="select_vae")],
         [InlineKeyboardButton("⚙️ Настройки", callback_data="settings")],
-        [InlineKeyboardButton("📚 Пресеты", callback_data="presets")]
+        [InlineKeyboardButton("📚 Пресеты", callback_data="presets")],
+        [InlineKeyboardButton("📖 Гайд для новичка", url="https://telegra.ph/Minigajd-po-risovaniyu-05-16")]  # 🔥 Новая кнопка
     ]
+
     await update.message.reply_text(
         f"👋 Привет, {user.first_name}!\n\n"
         "🎨 Я — твой помощник для генерации картинок через Forge.\n\n"
         "💰 *Ежедневный бонус:* Если осталось меньше 2 бесплатных генераций, баланс автоматически пополняется до 2 каждый день.\n\n"
         "📝 Напиши промпт или используй команды:\n"
-        "/gen <промпт> — сгенерировать\n"
-        "/model — модель | /vae — декодер | /preset — стиль \n"
-        "Политика конфеденциальности https://telegra.ph/Politika-konfidencialnosti-04-01-26" ,
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        "`/gen cute anime girl, pink hair, smiling`\n\n"
+        "📖 [Гайд для новичка](https://telegra.ph/Minigajd-po-risovaniyu-05-16) | "
+        "🔒 [Политика конфиденциальности](https://telegra.ph/Politika-konfidencialnosti-04-01-26)",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
     )
-
 
 async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, queue_manager) -> None:
     user = update.effective_user

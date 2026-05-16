@@ -18,11 +18,11 @@ def apply_preset_to_payload(payload: dict, preset_cfg: dict) -> None:
 
 
 async def build_generation_payload(
-    user_id: int,
-    prompt: str,
-    preset_key: Optional[str],
-    model_name: Optional[str],
-    lora_string: Optional[str] = None
+        user_id: int,
+        prompt: str,
+        preset_key: Optional[str],
+        model_name: Optional[str],
+        lora_string: Optional[str] = None
 ) -> tuple[dict, str, str]:
     """
     Собирает полный payload для генерации.
@@ -46,7 +46,9 @@ async def build_generation_payload(
         "do_not_save_grid": True,
     }
 
-    prompt_prefix, prompt_suffix, negative_suffix = "", "", ""
+    prompt_prefix = config.DEFAULTS.get('prompt_prefix', "")
+    prompt_suffix = config.DEFAULTS.get('prompt_suffix', "")
+    negative_suffix = config.DEFAULTS.get('negative_suffix', "")
 
     if preset_key:
         cfg = config.PRESETS.get(preset_key)
@@ -59,15 +61,16 @@ async def build_generation_payload(
             prompt_suffix = cfg.get("prompt_suffix", "")
             negative_suffix = cfg.get("negative_suffix", "")
 
-    # 1. Склеиваем ПРЕФИКС + ПРОМПТ + СУФФИКС
-    parts = [p.strip() for p in (prompt_prefix, prompt, prompt_suffix) if p]
+    parts = [p for p in (_clean(prompt_prefix), _clean(prompt), _clean(prompt_suffix)) if p]
 
-    # 2. Добавляем LoRA в конец (формат Forge/A1111: <lora:filename:weight>)
-    # 2. Вставляем LoRA-теги (если пользователь задал их в настройках)
+    # 2. Добавляем LoRA (тоже чистим)
     if lora_string:
-        parts.append(lora_string.strip())
+        lora_clean = _clean(lora_string)
+        if lora_clean:
+            parts.append(lora_clean)
 
-    payload["prompt"] = " ".join(parts)
+    # 3. Склеиваем через запятую + пробел (стандарт SD/A1111)
+    payload["prompt"] = ", ".join(parts)
     if negative_suffix:
         payload["negative_prompt"] = negative_suffix
 
@@ -90,3 +93,8 @@ async def build_generation_payload(
     payload["override_settings_restore_afterwards"] = True
 
     return payload, prompt_suffix, negative_suffix
+
+
+# 🔹 Хелпер: убирает пробелы и крайние запятые
+def _clean(p):
+    return p.strip().strip(", ") if p else ""
