@@ -33,20 +33,20 @@ SETTING_MODEL_MAP = {
         "cfg_scale": 1.5,  # Низкий CFG = меньше артефактов
         "width": 832,  # SDXL-родное разрешение (вертикаль)
         "height": 1216,
-        "negative_prompt": "(extra limbs, extra legs, extra arms, duplicate, multiple people, deformed, bad anatomy, bad hands:1.2), lowres, blurry, watermark",
+        "negative_suffix": "(extra limbs, extra legs, extra arms, duplicate, multiple people, deformed, bad anatomy, bad hands:1.2), lowres, blurry, watermark",
         "sampler_name": "DPM++ SDE",
         "scheduler": "karras",
     },
     "boleromixPony_v233": {
-        "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime",
-        "prompt_suffix": ", masterpiece, highly detailed",
-        "negative_prompt": "score_4, score_5, score_6, source_furry, low quality, bad anatomy, text, watermark, blurry",
+        "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime, masterpiece, ultra-detailed, best quality",
+        "prompt_suffix": ", cinematic lighting",
+        "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
         "width": 832,
         "height": 1216,
-        "steps": 28,
-        "cfg_scale": 7.0,
-        "sampler_name": "DPM++ 2M",
-        "scheduler": "karras"
+        "steps": 32,
+        "cfg_scale": 5.4,
+        "sampler_name": "DPM++ 2M SDE",
+        "scheduler": "Karras"
     }
 }
 
@@ -59,19 +59,41 @@ MODELS = {
     "✨ Аниме (confettiComradeMix)": "confettiComradeMix_confettiComradeMix.safetensors",
 }
 
-# 🎭 Пресеты
+SEED = - 1
+# Спасите, я уже 4 ночи подряд не сплю до 2 ночи! Уберите от меня змею! (подпись Кот Барсик)
+HAND_FIXERS = {
+    'boleromixPony_v233': {
+        'hands_str': ',handfixer, <lora:HandFixer_pdxl_Incrs_v1:0.45>',
+        'hands_negative': ', bad anatomy, bad hands, (extra fingers:1.1), (missing fingers:1.1), (fused fingers:1.1), malformed hands,bad fingers, deformed hands, fused fingers, interlocked fingers, anatomically incorrect hands',
+        'preset_key': ['anime_art', 'anime_art_vertical']
+    }
+}
+
+
 PRESETS = {
     "anime_art": {
-        "name": "🎨 Аниме-арт (PonyBase)",  # Имя для меню, можно вернуть просто "🎨 Аниме-арт"
-        "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime",
-        "prompt_suffix": ", masterpiece, highly detailed",
-        "negative_suffix": "score_4, score_5, score_6, source_furry, low quality, bad anatomy, text, watermark, blurry",
+        "name": "🎨 Аниме-Универсал (832x1216)",
+        "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime, masterpiece, ultra-detailed, best quality",
+        "prompt_suffix": ", cinematic lighting",
+        "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
         "width": 832,
         "height": 1216,
-        "steps": 28,
-        "cfg_scale": 7.0,
-        "sampler": "DPM++ 2M",
-        "scheduler": "karras"
+        "steps": 32,
+        "cfg_scale": 5.4,
+        "sampler": "DPM++ 2M SDE",
+        "scheduler": "Karras"
+    },
+    "anime_art_vertical": {
+        "name": "🎨 Аниме-Универсал (1216x832)",
+        "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime, masterpiece, ultra-detailed, best quality",
+        "prompt_suffix": ", cinematic lighting",
+        "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
+        "width": 1216,
+        "height": 832,
+        "steps": 32,
+        "cfg_scale": 5.4,
+        "sampler": "DPM++ 2M SDE",
+        "scheduler": "Karras"
     },
     "realism": {
         "name": "📸 Реализм (Juggernaut)",
@@ -174,3 +196,34 @@ PRESET_LIMITS = {
 PLATEGA_API_URL = "https://app.platega.io"
 PLATEGA_MERCHANT_ID = os.getenv("PLATEGA_MERCHANT_ID")
 PLATEGA_API_KEY = os.getenv("PLATEGA_API_KEY")
+ENABLE_ADETAILER= os.getenv("ENABLE_ADETAILER", "false").lower() == "true"
+
+ADETAILER_HAND_CFG_OLD = {
+    "ad_model": "hand_yolov8n.pt",
+    "ad_prompt": "score_9, score_8_up, score_7_up, 5 fingers, perfect hands",
+    "ad_negative_prompt": "",          # 🔧 Pydantic v2 ломается на строке "None". Пустая строка = безопасный ноль.
+    "ad_confidence": 0.30,
+    "ad_denoising_strength": 0.58,
+    "ad_mask_blur": 4,
+    "ad_padding": 32,
+    "ad_inpaint_width": 0,
+    "ad_inpaint_height": 0,
+    "ad_restore_face": False,
+    "ad_inpaint_only_masked": True,
+    "ad_steps": 12
+}
+
+ADETAILER_HAND_CFG = {
+    "ad_model": "hand_yolov8n.pt",
+    "ad_prompt": "beautiful detailed hands, correct hand anatomy, natural hand pose",
+    "ad_negative_prompt": "extra fingers, fused fingers, malformed hands, bad hands, mutated fingers, missing fingers",
+    "ad_confidence": 0.35,
+    "ad_denoising_strength": 0.38,
+    "ad_mask_blur": 4,
+    "ad_padding": 32,
+    "ad_inpaint_width": 0,
+    "ad_inpaint_height": 0,
+    "ad_restore_face": False,
+   # "ad_inpaint_only_masked": False,
+    "ad_steps": 16
+}
