@@ -64,7 +64,7 @@ SEED = - 1
 HAND_FIXERS = {
     'boleromixPony_v233': {
         'hands_str': ',handfixer, <lora:HandFixer_pdxl_Incrs_v1:0.45>',
-        'hands_negative': ', bad anatomy, bad hands, (extra fingers:1.1), (missing fingers:1.1), (fused fingers:1.1), malformed hands,bad fingers, deformed hands, fused fingers, interlocked fingers, anatomically incorrect hands',
+        'hands_negative': ', bad anatomy, bad hands, (extra fingers:1.1), (missing fingers:1.1), (fused fingers:1.1), malformed hands,bad fingers, deformed hands, interlocked fingers, anatomically incorrect hands',
         'preset_key': ['anime_art', 'anime_art_vertical']
     }
 }
