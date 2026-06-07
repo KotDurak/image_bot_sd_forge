@@ -43,7 +43,7 @@ SETTING_MODEL_MAP = {
         "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
         "width": 832,
         "height": 1216,
-        "steps": 32,
+        "steps": 30,
         "cfg_scale": 5.4,
         "sampler_name": "DPM++ 2M SDE",
         "scheduler": "Karras"
@@ -61,7 +61,7 @@ MODELS = {
 
 SEED = - 1
 # Спасите, я уже 4 ночи подряд не сплю до 2 ночи! Уберите от меня змею! (подпись Кот Барсик)
-HANDFIXER_WEIGHT = '0.8'
+HANDFIXER_WEIGHT = '0.9'
 HAND_FIXERS = {
     'boleromixPony_v233': {
         'hands_str': f',handfixer, <lora:HandFixer_pdxl_Incrs_v1:{HANDFIXER_WEIGHT}>',
@@ -79,7 +79,7 @@ PRESETS = {
         "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
         "width": 832,
         "height": 1216,
-        "steps": 32,
+        "steps": 30,
         "cfg_scale": 5.4,
         "sampler": "DPM++ 2M SDE",
         "scheduler": "Karras"
@@ -91,7 +91,7 @@ PRESETS = {
         "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
         "width": 1216,
         "height": 832,
-        "steps": 32,
+        "steps": 30,
         "cfg_scale": 5.4,
         "sampler": "DPM++ 2M SDE",
         "scheduler": "Karras"
