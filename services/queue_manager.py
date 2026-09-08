@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 QUEUE_POLL_INTERVAL = 0.1
 MAX_BATCH_SIZE = 4
 MODEL_SWITCH_TIMEOUT = 45
-GENERATION_TIMEOUT = 120
+GENERATION_TIMEOUT = 200
 MAX_STATS_ENTRIES = 100
 STATS_PRUNE_COUNT = 10
 
@@ -138,14 +138,31 @@ class GenerationQueue:
         user_id, start_time = item.user_id, time.perf_counter()
         model, preset = self._extract_model_and_preset(item)
         logger.info(f"🎨 Генерация для user_{user_id}: {item.prompt[:50]}...")
+
+        # 1. Запускаем фоновый мониторинг прогресса
+        monitor_task = asyncio.create_task(self._monitor_progress(item))
+
         try:
+            # 2. Запускаем саму генерацию
             image_bytes = await asyncio.wait_for(
-                asyncio.to_thread(item.callback, item.payload),  # 🔥 Передаём payload как есть
+                asyncio.to_thread(item.callback, item.payload),
                 timeout=GENERATION_TIMEOUT
             )
-            if not image_bytes: raise ValueError("Пустой ответ от Forge API")
+
+            if not image_bytes:
+                raise ValueError("Пустой ответ от Forge API")
+
+            # 3. Принудительно останавливаем мониторинг, так как генерация завершена
+            monitor_task.cancel()
+            try:
+                await monitor_task
+            except asyncio.CancelledError:
+                pass  # Ожидаемое поведение при отмене
+
+            # 4. Отправляем результат (это автоматически затрет сообщение progress_msg)
             await send_image_with_actions(item.message, image_bytes, item.prompt[:100])
 
+            # ... далее твой код логирования и рекламы без изменений ...
             gen_id = None
             try:
                 gen_id = await log_generation(user_id=user_id, prompt=item.prompt, model=model, preset=preset,
@@ -156,10 +173,13 @@ class GenerationQueue:
             if item.show_ads and gen_id:
                 from services.ad_renderer import show_ad_after_generation
                 asyncio.create_task(show_ad_after_generation(item.message, gen_id=gen_id))
+
         except asyncio.TimeoutError:
+            monitor_task.cancel()  # Не забываем отменить мониторинг при ошибке
             logger.error(f"⏰ Таймаут генерации ({GENERATION_TIMEOUT}с)")
             await self._handle_generation_error(item, "timeout", time.perf_counter() - start_time)
         except Exception as e:
+            monitor_task.cancel()
             logger.error(f"❌ Ошибка генерации: {e}", exc_info=True)
             await self._handle_generation_error(item, str(e)[:200], time.perf_counter() - start_time)
         finally:
@@ -206,3 +226,46 @@ class GenerationQueue:
     @property
     def queue_size(self) -> int:
         return self._queue.qsize()
+
+
+    async def _monitor_progress(self, item: QueueItem) -> None:
+        """Фоновая задача для обновления прогресса в Telegram."""
+        from services.forge_api import get_forge_progress
+        import time
+
+        last_update_time = 0
+        update_interval = 2.5  # Обновляем не чаще чем раз в 2.5 сек (защита от лимитов Telegram)
+
+        while True:
+            try:
+                # Вызываем синхронный запрос в отдельном потоке, чтобы не блокировать asyncio
+                progress_data = await asyncio.to_thread(get_forge_progress)
+                progress = progress_data.get('progress', 0.0)
+                eta = progress_data.get('eta_relative', 0)
+
+                if progress > 0.01:  # Показываем прогресс, только когда он реально пошел (>1%)
+                    percent = int(progress * 100)
+                    current_time = time.time()
+
+                    if current_time - last_update_time >= update_interval:
+                        # Формируем красивое сообщение
+                        eta_text = f"⏱ ~{int(eta)} сек." if eta > 0 else "⏱ Завершение..."
+                        text = f"🎨 Рисую... {percent}%\n{eta_text}"
+
+                        await item.progress_msg.edit_text(text)
+                        last_update_time = current_time
+
+                # Если прогресс близок к концу, выходим из цикла мониторинга,
+                # чтобы не пытаться редактировать сообщение после отправки картинки
+                if progress >= 0.98:
+                    break
+
+                await asyncio.sleep(2.0)  # Пауза между опросами API
+
+            except Exception as e:
+                err_str = str(e).lower()
+                # Игнорируем ошибки "сообщение не изменено" или "сообщение не найдено" (уже удалено/заменено)
+                if "message is not modified" in err_str or "message to edit not found" in err_str:
+                    break
+                # В остальных случаях просто ждем и пробуем снова, чтобы не уронить воркер
+                await asyncio.sleep(2.0)

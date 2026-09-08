@@ -92,3 +92,19 @@ def fetch_available_loras(user_id: int = None) -> list[dict]:
     except Exception as e:
         logger.error(f"fetch_available_loras error: {e}")
         return []
+
+
+def get_forge_progress() -> dict:
+    """
+    Получает текущий прогресс генерации из Forge API.
+    Возвращает словарь вида: {'progress': 0.45, 'eta_relative': 12.5, 'state': {'job_no': 1, 'job_count': 1}}
+    """
+    try:
+        # Если у тебя есть api_auth в конфиге, добавь его в headers или url
+        url = f"{config.FORGE_URL}/sdapi/v1/progress"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        # Возвращаем заглушку, чтобы не ломать очередь, если API временно недоступен
+        return {'progress': 0.0, 'eta_relative': 0}

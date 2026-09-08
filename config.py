@@ -61,39 +61,38 @@ MODELS = {
 
 SEED = - 1
 # Спасите, я уже 4 ночи подряд не сплю до 2 ночи! Уберите от меня змею! (подпись Кот Барсик)
-HANDFIXER_WEIGHT = '0.9'
+HANDFIXER_WEIGHT = '0.6'
 HAND_FIXERS = {
     'boleromixPony_v233': {
-        'hands_str': f',handfixer, <lora:HandFixer_pdxl_Incrs_v1:{HANDFIXER_WEIGHT}>',
-        'hands_negative': ', bad anatomy, bad hands, extra fingers, missing fingers, fused fingers, malformed hands,bad fingers, deformed hands, interlocked fingers, anatomically incorrect hands',
+        'hands_str': f'handfixer, <lora:HandFixer_pdxl_Incrs_v1:{HANDFIXER_WEIGHT}>, detailed hands, perfect hands, five fingers',
+        'hands_negative': 'bad anatomy, bad hands, extra fingers, missing fingers, fused fingers, malformed hands, bad fingers, deformed hands, interlocked fingers, anatomically incorrect hands, extra digit, fewer digits, mutated hands, poorly drawn hands, text, watermark',
         'preset_key': ['anime_art', 'anime_art_vertical']
     }
 }
-
 
 PRESETS = {
     "anime_art": {
         "name": "🎨 Аниме-Универсал (832x1216)",
         "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime, masterpiece, ultra-detailed, best quality",
         "prompt_suffix": ", cinematic lighting",
-        "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
+        "negative_suffix": "score_4, score_5, score_6, worst quality, worst detail, low quality, 3d, realistic",
         "width": 832,
         "height": 1216,
-        "steps": 30,
-        "cfg_scale": 5.4,
-        "sampler": "DPM++ 2M SDE",
+        "steps": 28,
+        "cfg_scale": 5.5,
+        "sampler": "DPM++ 2M",
         "scheduler": "Karras"
     },
     "anime_art_vertical": {
         "name": "🎨 Аниме-Универсал (1216x832)",
         "prompt_prefix": "score_9, score_8_up, score_7_up, source_anime, masterpiece, ultra-detailed, best quality",
         "prompt_suffix": ", cinematic lighting",
-        "negative_suffix": "score_4, score_5, score_6, worst quality,worst detail, low quality, 3d, realistic",
+        "negative_suffix": "score_4, score_5, score_6, worst quality, worst detail, low quality, 3d, realistic",
         "width": 1216,
         "height": 832,
-        "steps": 30,
-        "cfg_scale": 5.4,
-        "sampler": "DPM++ 2M SDE",
+        "steps": 28,
+        "cfg_scale": 5.5,
+        "sampler": "DPM++ 2M",
         "scheduler": "Karras"
     },
     "realism": {

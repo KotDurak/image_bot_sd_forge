@@ -3,8 +3,8 @@ module.exports = {
     name: "my_bot",
     script: "./main.py",
     // Используйте двойные обратные слеши в путях для Windows
-    interpreter: "C:\\bot_for_sd\\.venv\\Scripts\\python.exe",
-    cwd: "C:\\bot_for_sd",
+    interpreter: "D:\\image_bot\\.venv\\Scripts\\python.exe",
+    cwd: "D:\\image_botd",
     watch: false,
     restart_delay: 3000,
     max_restarts: 10,
