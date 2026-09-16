@@ -101,7 +101,8 @@ async def build_generation_payload(
 
     override = {
         "sd_vae": vae_to_use,
-        "CLIP_stop_at_last_layers": 2 if (model_name and any(x in model_name.lower() for x in ["autismmix", "pony"])) else 1
+        "CLIP_stop_at_last_layers": 2 if (model_name and any(
+            x in model_name.lower() for x in ["autismmix", "pony", "nova", "illustrious"])) else 1
     }
     if model_name:
         override["sd_model_checkpoint"] = model_name

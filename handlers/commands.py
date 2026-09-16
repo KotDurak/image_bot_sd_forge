@@ -199,17 +199,14 @@ async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def loras_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # ✅ Универсальный способ получить объект сообщения (работает и для /command, и для кнопки)
     msg = update.effective_message
     if not msg:
         return
 
-    # ✅ Если это клик по кнопке, обязательно отвечаем серверу Telegram, чтобы не крутилось "часики"
     if update.callback_query:
         await update.callback_query.answer()
 
-
-    loras = fetch_available_loras(user_id = update.effective_user.id if update.effective_user else None)
+    loras = fetch_available_loras(user_id=update.effective_user.id if update.effective_user else None)
     if not loras:
         await msg.reply_text("📭 LoRA не найдены или API недоступен.")
         return
@@ -221,9 +218,12 @@ async def loras_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         lines.append(f"• `{alias}` → `<lora:{name}:1.0>`")
 
     lines.append("\n💡 Скопируй тег и вставь прямо в промпт.")
-    lines.append("💾 Или сохри набор: `/lora_set <lora:name:0.8> <lora:name2:0.5>`")
+    lines.append("💾 Или сохрани набор: `/lora_set <lora:name:0.8> <lora:name2:0.5>`")
 
-    await msg.reply_text("\n".join(lines), parse_mode="Markdown")
+    # 👇 ДОБАВЛЯЕМ ССЫЛКУ НА ШПАРГАЛКУ
+    lines.append("\n📖 [Полная шпаргалка с триггерами LoRA](https://t.me/loras_for_MyNekoBaka)")
+
+    await msg.reply_text("\n".join(lines), parse_mode="Markdown", disable_web_page_preview=True)
 
 
 async def lora_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
