@@ -16,7 +16,8 @@ from utils.prompt_utils import extract_prompt, prepare_prompt
 import html
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ContextTypes
-from presets import PRESETS
+from models.promo_codes import reward_referral_creator
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +33,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not user:
         return
-    await update_user_settings(user.id, user.first_name, model=None, preset=None)
+
+    # Если нужно сбрасывать/инициализировать настройки при старте:
+    # await update_user_settings(user.id, user.first_name, model=None, preset=None)
 
     # 1. Кнопка Web App (Reply Keyboard - самая надежная для sendData)
     reply_keyboard = ReplyKeyboardMarkup(
         [[KeyboardButton(text="🎨 Открыть Конструктор артов", web_app=WebAppInfo(url=config.WEBAPP_URL))]],
         resize_keyboard=True,
-        one_time_keyboard=False  # Оставляем её, чтобы пользователь мог нажать снова
+        one_time_keyboard=False
     )
 
     # 2. Инлайн кнопки для остального меню
@@ -48,13 +51,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton("📖 Гайд для новичка", url="https://telegra.ph/Minigajd-po-risovaniyu-05-16")]
     ])
 
-    await update.message.reply_text(
+    welcome_text = (
         f"👋 Привет, {user.first_name}!\n\n"
-        "🎨 Я — твой помощник для генерации картинок.\n\n"
+        "🎨 Я — твой помощник для генерации красивых артов.\n\n"
         "💡 *Нажми большую кнопку ниже*, чтобы собрать промпт без знания тегов. "
         "Я сам добавлю качество и отправлю его в очередь!\n\n"
-        "Или пиши вручную: `/gen cute anime girl`",
-        reply_markup=reply_keyboard,  # Сначала отправляем Reply клавиатуру
+        "Или пиши вручную: `/gen cute anime girl`\n\n"
+        "🐾 *Хочешь бесплатные генерации?*\n"
+        "Используй `/my_referral`, чтобы получить свой бонусный код. "
+        "Поделись им с другом: он получит халявные арты, а ты — награду!"
+    )
+
+    await update.message.reply_text(
+        welcome_text,
+        reply_markup=reply_keyboard,
         parse_mode="Markdown"
     )
 
@@ -65,12 +75,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         parse_mode="Markdown"
     )
 
+
 async def generate(
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
         queue_manager,
         custom_prompt: str = None,
-        overrides: dict = None  # <-- Принимаем словарь переопределений
+        overrides: dict = None
 ) -> None:
     user = update.effective_user
     if not user:
@@ -81,6 +92,7 @@ async def generate(
     usage_type = await check_user_limits(update, user_id)
     if usage_type is None:
         return
+
     # 2. Извлечение промпта
     if custom_prompt:
         prompt = custom_prompt
@@ -88,7 +100,7 @@ async def generate(
         prompt = extract_prompt(update, context)
 
     if prompt is None:
-        await update.effective_message.reply_text(" Укажи промпт.")
+        await update.effective_message.reply_text("⚠️ Укажи промпт.")
         return
 
     # 3. Перевод / валидация
@@ -110,11 +122,10 @@ async def generate(
     )
 
     # 🔥 ПРИМЕНЕНИЕ ПЕРЕОПРЕДЕЛЕНИЙ (OVERRIDES)
-    # Если из Web App прилетел словарь, мы точечно меняем нужные ключи в payload
     if overrides:
         for key, value in overrides.items():
             payload[key] = value
-            logger.info(f" Применен override: {key} = {value}")
+            logger.info(f"🔧 Применен override: {key} = {value}")
 
     # 5. Отправка в очередь
     progress_msg = await update.effective_message.reply_text("⏳ Подключение к очереди...")
@@ -130,8 +141,13 @@ async def generate(
             queue_manager=queue_manager,
             usage_type=usage_type
         )
+
+        #  ТРИГГЕР РЕФЕРАЛЬНОГО БОНУСА (Теперь надежно ждем выполнения)
+        # Функция сама проверит, есть ли реферал, и начислит бонус создателю
+        await reward_referral_creator(user_id)
+
     except Exception as e:
-        logger.error(f"Ошибка очереди: {e}", exc_info=True)
+        logger.error(f"❌ Ошибка очереди: {e}", exc_info=True)
         await update.effective_message.reply_text("❌ Ошибка при постановке в очередь.")
 
 

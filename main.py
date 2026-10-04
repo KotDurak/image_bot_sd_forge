@@ -2,7 +2,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
     PreCheckoutQueryHandler
 from telegram import Update
 from telegram.request import HTTPXRequest
-from handlers import payments, commands, callbacks, presets, admins, ad_management,platega_handler
+from handlers import payments, commands, callbacks, presets, admins, ad_management,platega_handler,promo_codes
 from db.async_core import async_db
 from handlers.callbacks import cb_vae_select
 from handlers.commands import vae_command
@@ -84,6 +84,11 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("ban", admins.ban_cmd))
     app.add_handler(CommandHandler("reset", admins.reset_cmd))
     app.add_handler(CommandHandler('add_credits', admins.debug_add_credits))
+    # 📊 Новая статистика
+    app.add_handler(CommandHandler("stats", admins.stats_cmd))
+    app.add_handler(CommandHandler("top", admins.top_cmd))
+    app.add_handler(CommandHandler("user_info", admins.user_info_cmd))
+
     # 📊 Реклама и отчётность
     app.add_handler(CommandHandler("ad_report", admins.ad_report_cmd))
     app.add_handler(CallbackQueryHandler(admins.ad_report_cmd, pattern=r"^ad_page_\d+_\d+$"))
@@ -111,6 +116,12 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("lora_clear", commands.lora_clear_command))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp.handle_webapp_data))
     app.add_handler(CommandHandler("app", commands.open_app_command))
+
+    # Промокоды
+    app.add_handler(CommandHandler("promo", promo_codes.promo_activate_cmd))
+    app.add_handler(CommandHandler("create_promo", promo_codes.create_promo_cmd, filters.User(config.ADMINS)))
+    app.add_handler(CommandHandler("promo_stats", promo_codes.promo_stats_cmd, filters.User(config.ADMINS)))
+    app.add_handler(CommandHandler("my_referral", promo_codes.my_referral_cmd))
 
 
 def main():
