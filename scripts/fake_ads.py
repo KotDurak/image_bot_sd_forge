@@ -41,7 +41,6 @@ async def generate_fake_impressions(ad_id: int, count: int = 50):
     gen_ids = [row[0] for row in await cursor.fetchall()]
 
     if not gen_ids:
-        print("❌ Нет генераций в БД для привязки. Сначала сделай пару /gen")
         return
 
     for i in range(count):

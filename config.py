@@ -31,15 +31,15 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "novaAnimeXL_ilV140")
 
 SETTING_MODEL_MAP = {
     "novaAnimeXL_ilV140": {
-        "prompt_prefix": "masterpiece, best quality, very aesthetic, highres, beautiful detailed eyes, anime style",
-        "prompt_suffix": ", cinematic lighting, detailed background",
-        "negative_suffix": "worst quality, low quality, bad anatomy, bad hands, missing fingers, extra digit, text, watermark, 3d, realistic, ugly",
+        "prompt_prefix": "masterpiece, best quality, highres, beautiful detailed eyes, anime style",
+        "prompt_suffix": "",
+        "negative_suffix": "worst quality, low quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digit, text, watermark, 3d, realistic, ugly",
         "width": 832,
         "height": 1216,
-        "steps": 20,  # ← было 28
-        "cfg_scale": 4.5,  # ← было 6.0
-        "sampler_name": "Euler a",  # ← было DPM++ 2M SDE
-        "scheduler": "Automatic"  # Euler a лучше работает с Automatic
+        "steps": 20,
+        "cfg_scale": 4.5,
+        "sampler_name": "Euler a",
+        "scheduler": "Automatic"
     }
 }
 
@@ -56,48 +56,9 @@ HANDFIXER_WEIGHT = '0.6'
 
 HAND_FIXERS = {
     'novaAnimeXL_ilV140': {
-        'hands_str': 'detailed hands, perfect hands, correct anatomy, five fingers',
-        'hands_negative': 'bad anatomy, bad hands, extra fingers, missing fingers, fused fingers, malformed hands, deformed hands, poorly drawn hands',
-        'preset_key': ['nova_anime_vertical', 'nova_anime_horizontal', 'nova_anime_square']
-    }
-}
-
-PRESETS = {
-    "nova_anime_vertical": {
-        "name": "🌟 Nova Anime XL (Вертикаль 832x1216)",
-        "prompt_prefix": "masterpiece, best quality, very aesthetic, highres, beautiful detailed eyes, anime style",
-        "prompt_suffix": ", cinematic lighting, detailed background",
-        "negative_suffix": "worst quality, low quality, bad anatomy, bad hands, missing fingers, extra digit, text, watermark, 3d, realistic, ugly",
-        "width": 832,
-        "height": 1216,
-        "steps": 20,  # ← 20
-        "cfg_scale": 4.5,  # ← 4.5
-        "sampler": "Euler a",  # ← Euler a
-        "scheduler": "Automatic"
-    },
-    "nova_anime_horizontal": {
-        "name": "🌟 Nova Anime XL (Горизонталь 1216x832)",
-        "prompt_prefix": "masterpiece, best quality, very aesthetic, highres, beautiful detailed eyes, anime style",
-        "prompt_suffix": ", cinematic lighting, detailed background",
-        "negative_suffix": "worst quality, low quality, bad anatomy, bad hands, missing fingers, extra digit, text, watermark, 3d, realistic, ugly",
-        "width": 1216,
-        "height": 832,
-        "steps": 20,
-        "cfg_scale": 4.5,
-        "sampler": "Euler a",
-        "scheduler": "Automatic"
-    },
-    "nova_anime_square": {
-        "name": "🌟 Nova Anime XL (Квадрат 1024x1024)",
-        "prompt_prefix": "masterpiece, best quality, very aesthetic, highres, beautiful detailed eyes, anime style",
-        "prompt_suffix": ", cinematic lighting, detailed background",
-        "negative_suffix": "worst quality, low quality, bad anatomy, bad hands, missing fingers, extra digit, text, watermark, 3d, realistic, ugly",
-        "width": 1024,
-        "height": 1024,
-        "steps": 20,
-        "cfg_scale": 4.5,
-        "sampler": "Euler a",
-        "scheduler": "Automatic"
+        'hands_str': '',  # ← ПУСТО! Модель справляется сама
+        'hands_negative': 'bad hands, missing fingers, extra digit, fused fingers, malformed hands',
+        'preset_key': ['nova_anime_vertical', 'nova_anime_horizontal', 'nova_anime_square', 'nova_anime_vertical_modern']
     }
 }
 
@@ -186,7 +147,9 @@ PRESET_LIMITS = {
 PLATEGA_API_URL = "https://app.platega.io"
 PLATEGA_MERCHANT_ID = os.getenv("PLATEGA_MERCHANT_ID")
 PLATEGA_API_KEY = os.getenv("PLATEGA_API_KEY")
-ENABLE_ADETAILER = os.getenv("ENABLE_ADETAILER", "false").lower() == "true"
+
+# 🔥 ВАЖНО: Включи это, если хочешь, чтобы ADetailer чинил руки автоматически!
+ENABLE_ADETAILER = os.getenv("ENABLE_ADETAILER", "true").lower() == "true"
 
 ADETAILER_HAND_CFG_OLD = {
     "ad_model": "hand_yolov8n.pt",
@@ -216,3 +179,5 @@ ADETAILER_HAND_CFG = {
     "ad_restore_face": False,
     "ad_steps": 16
 }
+
+WEBAPP_URL = os.getenv("WEBAPP_URL", 'https://kotdurak.github.io/prompt_generator')

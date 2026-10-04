@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes
 import config
 from models.users_presets import add_user_preset, list_user_presets, get_user_preset, update_user_preset
 from models.user_state import update_user_settings, get_user_settings
-from config import PRESETS
+from presets import PRESETS
 from services.forge_options import ForgeOptionsCache
 from utils.parsers import parse_key_value_args
 
@@ -35,7 +35,6 @@ _wizard_state: dict[int, dict] = {}
 # =============================================================================
 # === ЕДИНЫЙ РОУТЕР КНОПОК ПРЕСЕТОВ ============================================
 # =============================================================================
-
 async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Ловит все callback_data, начинающиеся с 'preset' или 'presets'"""
     query = update.callback_query
@@ -44,30 +43,30 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     data = query.data
 
-    # Открыть меню пресетов
+    # 1️⃣ Открыть меню пресетов
     if data in ("presets", "presets_list"):
         await _show_presets_menu(update, context)
         return
 
-    # Активация пресета
+    # 2️⃣ Активация пресета
     if data.startswith("preset_activate:"):
         key = data.split(":", 1)[1]
-        await update_user_settings(user_id, preset=key)
+        await update_user_settings(user_id, username=query.from_user.username, preset=key)
         await _show_presets_menu(update, context)
         return
 
-    # Удаление кастомного пресета
+    # 3️⃣ Удаление кастомного пресета (🔥 ФИКС: добавлен username)
     if data.startswith("preset_delete:"):
         key = data.split(":", 1)[1]
         from models.users_presets import delete_user_preset
         settings = await get_user_settings(user_id)
         if settings.get('preset') == key:
-            await update_user_settings(user_id, preset=None)
+            await update_user_settings(user_id, username=query.from_user.username, preset=None)
         await delete_user_preset(user_id, key)
         await _show_presets_menu(update, context)
         return
 
-    # 3️⃣ Старт создания
+    # 4️⃣ Старт создания
     if data == "preset_create_start":
         _wizard_state[user_id] = {"step": STEP_NAME, "data": {}}
         await query.edit_message_text(
@@ -78,7 +77,7 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 4️⃣ Выбор разрешения
+    # 5️⃣ Выбор разрешения
     if data.startswith("preset_res:"):
         w, h = map(int, data.split(":")[1].split("x"))
         _wizard_state[user_id]["data"].update({"width": w, "height": h})
@@ -95,7 +94,7 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                        reply_markup=InlineKeyboardMarkup(kb), parse_mode="HTML")
         return
 
-    # 5️⃣ Выбор шагов → переход к CFG (текст)
+    # 6️⃣ Выбор шагов → переход к CFG
     if data.startswith("preset_steps:"):
         _wizard_state[user_id]["data"]["steps"] = int(data.split(":")[1])
         _wizard_state[user_id]["step"] = STEP_CFG
@@ -108,7 +107,7 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 🔽 ШАГ 8: Выбор сэмплера (кнопки)
+    # 7️⃣ ШАГ 8: Выбор сэмплера
     if data.startswith("preset_sampler:"):
         _wizard_state[user_id]["data"]["sampler_name"] = data.split(":", 1)[1]
         _wizard_state[user_id]["step"] = STEP_SCHEDULER
@@ -127,15 +126,20 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 🔽 ШАГ 9: Выбор расписания → подтверждение
+    # 8️⃣ ШАГ 9: Выбор расписания → подтверждение
     if data.startswith("preset_sched:"):
         _wizard_state[user_id]["data"]["scheduler"] = data.split(":", 1)[1]
         _wizard_state[user_id]["step"] = STEP_CONFIRM
         await _show_confirmation(query.message, user_id)
         return
 
-    # 🔙 Назад в мастере (динамический)
+    # 🔙 Назад в мастере (🔥 ФИКС: Защита от KeyError, если сессия сбросилась)
     if data == "preset_step_back":
+        if user_id not in _wizard_state:
+            await query.answer("Сессия создания пресета истекла. Начните заново через '➕ Создать свой'.",
+                               show_alert=True)
+            return
+
         current = _wizard_state[user_id]["step"]
 
         if current == STEP_CFG:
@@ -181,7 +185,6 @@ async def preset_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "preset_cancel":
         _wizard_state.pop(user_id, None)
         await query.edit_message_text("🗑️ Создание отменено.", parse_mode="HTML")
-
 
 # =============================================================================
 # === МЕНЮ ПРЕСЕТОВ ==========================================================

@@ -13,6 +13,7 @@ import asyncio
 from utils.logger import setup_logging
 from services.forge_options import ForgeOptionsCache
 import os
+from handlers import webapp
 
 setup_logging(config.MODE, logs_dir=config.LOGS_DIR)
 queue_manager = GenerationQueue()
@@ -57,7 +58,6 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("help", callbacks.help_cmd))
     app.add_handler(CommandHandler("preset", commands.preset_command))
     app.add_handler(CommandHandler("cancel", presets.cancel_wizard))
-    app.add_handler(CommandHandler("model", commands.model_command))
     app.add_handler(CommandHandler("settings", commands.settings_command))
     app.add_handler(CommandHandler("history", commands.history_cmd))
     app.add_handler(CommandHandler("vae", vae_command))
@@ -109,6 +109,8 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("loras", commands.loras_command))
     app.add_handler(CommandHandler("lora_set", commands.lora_set_command))
     app.add_handler(CommandHandler("lora_clear", commands.lora_clear_command))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp.handle_webapp_data))
+    app.add_handler(CommandHandler("app", commands.open_app_command))
 
 
 def main():
@@ -120,6 +122,7 @@ def main():
         .post_init(post_init) \
         .post_shutdown(post_shutdown) \
         .build()
+    app.bot_data['queue_manager'] = queue_manager
     from handlers.error_handler import global_error_handler
     app.add_error_handler(global_error_handler)
     register_handlers(app)

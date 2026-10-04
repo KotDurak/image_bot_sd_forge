@@ -4,6 +4,7 @@ from models.user_state import get_user_settings
 from models.users_presets import get_user_preset
 import config
 import re
+from presets import PRESETS
 
 HUMAN_TRIGGERS = re.compile(
     r'\b(girl|boy|man|woman|solo|1girl|1boy|waifu|hands?|fingers?|holding|character|person|female|male|lady|guy)\b',
@@ -56,7 +57,7 @@ async def build_generation_payload(
     negative_suffix = config.DEFAULTS.get('negative_suffix', "")
 
     if preset_key:
-        cfg = config.PRESETS.get(preset_key)
+        cfg = PRESETS.get(preset_key)
         if not cfg:
             cfg = await get_user_preset(user_id, preset_key)
 
@@ -149,6 +150,8 @@ def get_adetailer_args_dict(user_prompt: str) -> list:
     return [valid_adetailer_hand_cfg]
 
 
+import re
+
 
 def add_handfixers_to_prompt(prompt_prefix: str, negative_suffix: str, prompt: str, model_name: str, preset_key: str):
     clean_model = model_name.split(" [")[0].strip()
@@ -160,24 +163,35 @@ def add_handfixers_to_prompt(prompt_prefix: str, negative_suffix: str, prompt: s
     hands_neg = fixer.get('hands_negative', '')
     preset_allowed = fixer.get('preset_key')
 
-    # Нормализуем в список, чтобы код работал и если в конфиге лежит одна строка, а не список
+    # Нормализуем в список
     if isinstance(preset_allowed, str):
         preset_allowed = [preset_allowed]
 
-    # 🔑 ИСПРАВЛЕНИЕ:
-    # Пропускаем авто-фиксатор ТОЛЬКО если пользователь явно выбрал пресет,
-    # которого НЕТ в списке разрешённых для данной модели.
-    # Если preset_key пустой/None -> применяем.
-    # Если preset_key есть и совпадает с одним из списка -> применяем.
+    # Пропускаем авто-фиксатор, если пользователь выбрал пресет не из списка
     if preset_key and preset_allowed and preset_key not in preset_allowed:
         return prompt_prefix, negative_suffix
 
     if not HUMAN_TRIGGERS.search(prompt):
         return prompt_prefix, negative_suffix
 
-    if hands_str.strip() and hands_str.strip() not in prompt_prefix:
-        prompt_prefix += hands_str
-    if hands_neg.strip() and hands_neg.strip() not in negative_suffix:
-        negative_suffix += hands_neg
+    # 🔥 ДОБАВЛЯЕМ ПОЗИТИВНЫЙ ФИКС (если есть и ещё не добавлен)
+    if hands_str.strip():
+        # Проверяем, есть ли уже этот тег в промпте
+        if hands_str.strip() not in prompt_prefix:
+            prompt_prefix += f", {hands_str.strip()}"
+
+    # 🔥 УМНОЕ ДОБАВЛЕНИЕ НЕГАТИВА (без дубликатов!)
+    if hands_neg.strip():
+        # Разбиваем оба негатива на теги
+        existing_neg_tags = [tag.strip() for tag in negative_suffix.split(',') if tag.strip()]
+        new_neg_tags = [tag.strip() for tag in hands_neg.split(',') if tag.strip()]
+
+        # Добавляем только те теги, которых ещё нет
+        for tag in new_neg_tags:
+            if tag not in existing_neg_tags:
+                existing_neg_tags.append(tag)
+
+        # Собираем обратно в строку
+        negative_suffix = ', '.join(existing_neg_tags)
 
     return prompt_prefix, negative_suffix

@@ -2,12 +2,13 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from models.user_state import get_user_settings, update_user_settings
-from presets import get_preset_list
+from presets import PRESETS, get_preset_list  # 🔥 ИМПОРТИРУЕМ ОТСЮДА
 import config
 from models.users_presets import get_user_preset
 from services.forge_api import fetch_available_models
 
 logger = logging.getLogger(__name__)
+
 
 async def select_model_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -26,6 +27,7 @@ async def select_model_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     parse_mode="Markdown"
                 )
                 return
+
     models = fetch_available_models()
     keyboard = []
     for i in range(0, min(len(models), 20), 2):
@@ -37,34 +39,6 @@ async def select_model_callback(update: Update, context: ContextTypes.DEFAULT_TY
         "🎨 Выберите модель для генерации:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
-async def presets_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    keyboard = [
-        [InlineKeyboardButton(name, callback_data=f"preset_{key}")]
-        for key, name in get_preset_list()
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="main_menu")])
-    await query.edit_message_text(
-        "🎨 Выберите стиль-пресет:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-async def apply_preset_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    preset_key = query.data.replace("preset_", "")
-    preset_config = config.PRESETS.get(preset_key, {})
-    preset_name = preset_config.get("name", preset_key)
-    await update_user_settings(query.from_user.id, query.from_user.username, preset=preset_key)
-    await query.edit_message_text(
-        f"✅ Применён пресет: **{preset_name}**\n\n"
-        "Теперь напиши промпт после /gen — пресет автоматически добавит нужные детали!",
-        parse_mode="Markdown"
-    )
-
-
 
 async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает текущие настройки через inline-кнопки (с учётом sampler/scheduler)"""
@@ -86,7 +60,8 @@ async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     current_preset = settings.get("preset")
 
     # 🔹 Если есть активный кастомный пресет — переопределяем дефолты
-    if current_preset and current_preset not in config.PRESETS:
+    # 🔥 ОБНОВЛЕНО: проверка через PRESETS, а не config.PRESETS
+    if current_preset and current_preset not in PRESETS:
         user_preset = await get_user_preset(user_id, current_preset)
         if user_preset:
             width = user_preset.get('width', width)
@@ -101,8 +76,9 @@ async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     preset_display = "не выбран"
     if current_preset:
-        if current_preset in config.PRESETS:
-            preset_display = config.PRESETS[current_preset].get("name", current_preset)
+        # 🔥 ОБНОВЛЕНО: проверка через PRESETS
+        if current_preset in PRESETS:
+            preset_display = PRESETS[current_preset].get("name", current_preset)
         else:
             user_preset = await get_user_preset(user_id, current_preset)
             if user_preset:
@@ -129,11 +105,11 @@ async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+
 async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     keyboard = [
-        [InlineKeyboardButton("🎨 Выбрать модель", callback_data="select_model")],
         [InlineKeyboardButton("⚙️ Настройки", callback_data="settings")],
         [InlineKeyboardButton("📚 Пресеты", callback_data="presets")],
     ]
@@ -151,9 +127,9 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # 📦 Базовые команды (видят все)
     sections = [
         ("🎨 Генерация", [
+            "/`app` — Открыть «Создателя персонажей» (собрать промпт кнопками без знания тегов)",
             "`/gen <промпт>` — создать изображение (пиши на английском)",
-            "`/model` — выбрать нейросеть",
-            "`/vae` — выбрать декодер (решает проблемы с цветами/мылом)",
+            "`/vae` — выбрать декодер (рестит проблемы с цветами/мылом)",
             "`/preset` — меню пресетов: применить или создать",
             "`/preset_add` — 🚀 создание пресета в одну строку:\n"
             "  `/preset_add name=Имя key=uniq_key res=832x1216 steps=28 cfg=5.0 sampler=DPM++ 2M scheduler=karras prefix=score_9, post_prompt=best quality negative=bad hands`",
@@ -216,7 +192,6 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # 🎛 Кнопки
     keyboard = [
-        [InlineKeyboardButton("🎨 Выбрать модель", callback_data="select_model")],
         [InlineKeyboardButton("📚 Пресеты", callback_data="presets")],
         [InlineKeyboardButton("⚙️ Настройки", callback_data="settings")],
         [InlineKeyboardButton("🧩 LoRA", callback_data="loras_list")]
