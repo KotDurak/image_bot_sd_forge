@@ -17,7 +17,7 @@ import html
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ContextTypes
 from models.promo_codes import reward_referral_creator
-import asyncio
+from telegram.error import NetworkError, TimedOut
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton("📚 Пресеты", callback_data="presets")],
         [InlineKeyboardButton("📖 Гайд для новичка", url="https://telegra.ph/Minigajd-po-risovaniyu-05-16")]
     ])
-
+    await update_user_settings(user.id, username=None, preset=None)
     welcome_text = (
         f"👋 Привет, {user.first_name}!\n\n"
         "🎨 Я — твой помощник для генерации красивых артов.\n\n"
@@ -100,17 +100,20 @@ async def generate(
         prompt = extract_prompt(update, context)
 
     if prompt is None:
-        await update.effective_message.reply_text("⚠️ Укажи промпт.")
+        try:
+            await update.effective_message.reply_text("⚠️ Укажи промпт.")
+        except (NetworkError, TimedOut) as e:
+            logger.warning(f"⚠️ Не удалось отправить 'Укажи промпт' юзеру {user_id} (сеть): {e}")
         return
 
     # 3. Перевод / валидация
     prompt = await prepare_prompt(update, prompt)
     if prompt is None:
-        return
+        return # prepare_prompt, скорее всего, уже сам обработал ответ или лог
 
     # 4. Сборка базового payload
     settings = await get_user_settings(user_id)
-    safe_preset = settings.get("preset") or "nova_anime_vertical"
+    safe_preset = settings.get("preset")
     safe_model = settings.get("model") or config.DEFAULT_MODEL
 
     payload, _, _ = await build_generation_payload(
@@ -127,9 +130,19 @@ async def generate(
             payload[key] = value
             logger.info(f"🔧 Применен override: {key} = {value}")
 
-    # 5. Отправка в очередь
-    progress_msg = await update.effective_message.reply_text("⏳ Подключение к очереди...")
+    # 5. Отправка в очередь (КРИТИЧЕСКАЯ ТОЧКА)
+    try:
+        progress_msg = await update.effective_message.reply_text("⏳ Подключение к очереди...")
+    except (NetworkError, TimedOut) as e:
+        # Если сеть лежит, мы не можем даже отправить "⏳".
+        # Логируем и выходим, чтобы не ронять бота дальше.
+        logger.error(f"❌ КРИТИЧЕСКАЯ СЕТЕВАЯ ОШИБКА: Не удалось отправить сообщение о начале очереди юзеру {user_id}. Telegram API недоступен. {e}")
+        return
+    except Exception as e:
+        logger.exception(f"❌ Неожиданная ошибка при отправке сообщения о прогрессе: {e}")
+        return
 
+    # 6. Сама постановка в очередь
     try:
         await submit_to_queue(
             user_id=user_id,
@@ -142,13 +155,16 @@ async def generate(
             usage_type=usage_type
         )
 
-        #  ТРИГГЕР РЕФЕРАЛЬНОГО БОНУСА (Теперь надежно ждем выполнения)
-        # Функция сама проверит, есть ли реферал, и начислит бонус создателю
+        # ТРИГГЕР РЕФЕРАЛЬНОГО БОНУСА
         await reward_referral_creator(user_id)
 
     except Exception as e:
         logger.error(f"❌ Ошибка очереди: {e}", exc_info=True)
-        await update.effective_message.reply_text("❌ Ошибка при постановке в очередь.")
+        # Пытаемся сообщить об ошибке, но тоже защищаемся от сбоя сети
+        try:
+            await update.effective_message.reply_text("❌ Ошибка при постановке в очередь.")
+        except (NetworkError, TimedOut):
+            logger.error(f"❌ Не удалось даже сообщить об ошибке очереди юзеру {user_id} из-за проблем с сетью.")
 
 
 from presets import PRESETS  # Добавь этот импорт в начало файла, если его нет

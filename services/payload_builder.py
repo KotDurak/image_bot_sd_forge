@@ -56,6 +56,9 @@ async def build_generation_payload(
     prompt_suffix = config.DEFAULTS.get('prompt_suffix', "")
     negative_suffix = config.DEFAULTS.get('negative_suffix', "")
 
+    # 🔥 НОВОЕ: Сохраняем clip_skip из пресета (если есть)
+    preset_clip_skip = None
+
     if preset_key:
         cfg = PRESETS.get(preset_key)
         if not cfg:
@@ -66,6 +69,9 @@ async def build_generation_payload(
             prompt_prefix = cfg.get("prompt_prefix", "")
             prompt_suffix = cfg.get("prompt_suffix", "")
             negative_suffix = cfg.get("negative_suffix", "")
+            # 🔥 Запоминаем clip_skip из пресета
+            preset_clip_skip = cfg.get("clip_skip")
+
     prompt_prefix, negative_suffix = add_handfixers_to_prompt(prompt_prefix,
                                                               negative_suffix,
                                                               prompt,
@@ -89,7 +95,7 @@ async def build_generation_payload(
         payload["alwayson_scripts"] = {
             "ADetailer": {"args": get_adetailer_args_dict(payload['prompt'])}
         }
-        
+
     user_settings = await get_user_settings(user_id)
     user_vae = user_settings.get("vae")
     vae_to_use = "Automatic"
@@ -100,10 +106,18 @@ async def build_generation_payload(
         vae_to_use = "sdxl_vae.safetensors"
         '''
 
+    # 🔥 НОВОЕ: Логика clip_skip с приоритетом пресета
+    if preset_clip_skip is not None:
+        # Если в пресете явно указан clip_skip — используем его
+        clip_skip = preset_clip_skip
+    else:
+        # Иначе — глобальная логика по модели
+        clip_skip = 2 if (model_name and any(
+            x in model_name.lower() for x in ["autismmix", "pony", "nova", "illustrious"])) else 1
+
     override = {
         "sd_vae": vae_to_use,
-        "CLIP_stop_at_last_layers": 2 if (model_name and any(
-            x in model_name.lower() for x in ["autismmix", "pony", "nova", "illustrious"])) else 1
+        "CLIP_stop_at_last_layers": clip_skip
     }
     if model_name:
         override["sd_model_checkpoint"] = model_name

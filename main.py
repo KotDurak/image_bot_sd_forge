@@ -129,7 +129,7 @@ def main():
 
     app = Application.builder() \
         .token(config.TELEGRAM_TOKEN) \
-        .request(HTTPXRequest(connect_timeout=10, read_timeout=20)) \
+        .request(HTTPXRequest(connect_timeout=15, read_timeout=30)) \
         .post_init(post_init) \
         .post_shutdown(post_shutdown) \
         .build()

@@ -30,16 +30,43 @@ MODE = os.getenv("MODE", "PROD").upper()
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "novaAnimeXL_ilV140")
 
 SETTING_MODEL_MAP = {
+    "novaAnimeXL_ilV190": {
+        "clip_skip": 2,  # Подтверждено для Nova/Illustrious
+        "prompt_prefix": "masterpiece, best quality, amazing quality, 4k, very aesthetic, high resolution, ultra-detailed, absurdres, newest, 1girl, solo",
+        "prompt_suffix": "BREAK, depth of field, volumetric lighting",
+        "negative_suffix": "modern, recent, old, oldest, cartoon, graphic, text, painting, crayon, graphite, abstract, glitch, deformed, mutated, ugly, disfigured, long body, lowres, bad anatomy, bad hands, missing fingers, extra digits, fewer digits, cropped, very displeasing, (worst quality, bad quality:1.2), bad anatomy, sketch, jpeg artifacts, signature, watermark, username, signature, simple background, conjoined, bad ai-generated",
+        "width": 832,
+        "height": 1216,
+        "steps": 20,  # ← ЗОЛОТОЙ СТАНДАРТ
+        "cfg_scale": 4.5,  # ← ЗОЛОТОЙ СТАНДАРТ
+        "sampler_name": "Euler a",  # Или DPM++ 2M Karras (оба работают)
+        "scheduler": "Karras"
+    },
+
+    "novaAnimeXL_ilV180": {
+        "clip_skip": 2,
+        "prompt_prefix": "masterpiece, best quality, amazing quality, 4k, very aesthetic, high resolution, ultra-detailed, absurdres, newest, 1girl, solo",
+        "prompt_suffix": "BREAK, depth of field, volumetric lighting",
+        "negative_suffix": "modern, recent, old, oldest, cartoon, graphic, text, painting, crayon, graphite, abstract, glitch, deformed, mutated, ugly, disfigured, long body, lowres, bad anatomy, bad hands, missing fingers, extra digits, fewer digits, cropped, very displeasing, (worst quality, bad quality:1.2), bad anatomy, sketch, jpeg artifacts, signature, watermark, username, signature, simple background, conjoined, bad ai-generated",
+        "width": 832,
+        "height": 1216,
+        "steps": 20,
+        "cfg_scale": 5.0,
+        "sampler_name": "DPM++ 2M Karras",
+        "scheduler": "Karras"
+    },
+
     "novaAnimeXL_ilV140": {
-        "prompt_prefix": "masterpiece, best quality, highres, beautiful detailed eyes, anime style",
+        "clip_skip": 2,
+        "prompt_prefix": "masterpiece, best quality, highres, beautiful detailed eyes",
         "prompt_suffix": "",
-        "negative_suffix": "worst quality, low quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digit, text, watermark, 3d, realistic, ugly",
+        "negative_suffix": "modern, recent, old, oldest, cartoon, graphic, text, painting, crayon, graphite, abstract, glitch, deformed, mutated, ugly, disfigured, long body, lowres, bad anatomy, bad hands, missing fingers, extra digits, fewer digits, cropped, very displeasing, (worst quality, bad quality:1.2), bad anatomy, sketch, jpeg artifacts, signature, watermark, username, signature, simple background, conjoined, bad ai-generated",
         "width": 832,
         "height": 1216,
         "steps": 20,
         "cfg_scale": 4.5,
         "sampler_name": "Euler a",
-        "scheduler": "Automatic"
+        "scheduler": "Karras"
     }
 }
 
