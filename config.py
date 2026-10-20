@@ -17,6 +17,7 @@ FORGE_URL = os.getenv("FORGE_URL", "http://localhost:7860")
 API_USER = os.getenv("API_USER", "")
 API_PASS = os.getenv("API_PASS", "")
 API_AUTH = (API_USER, API_PASS) if API_USER and API_PASS else None
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8000")
 
 # 👥 Доступ
 ALLOWED_USERS = {
@@ -74,7 +75,7 @@ DEFAULTS = SETTING_MODEL_MAP[DEFAULT_MODEL]
 
 # 🖼 Модели - только Nova
 MODELS = {
-    "🌟 Nova Anime XL": "novaAnimeXL_ilV140.safetensors",
+    "🌟 Nova Anime XL": "novaAnimeXL_ilV190.safetensors",
 }
 
 SEED = -1

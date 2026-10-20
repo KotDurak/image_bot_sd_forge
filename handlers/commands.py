@@ -114,7 +114,7 @@ async def generate(
     # 4. Сборка базового payload
     settings = await get_user_settings(user_id)
     safe_preset = settings.get("preset")
-    safe_model = settings.get("model") or config.DEFAULT_MODEL
+    safe_model = config.DEFAULT_MODEL
 
     payload, _, _ = await build_generation_payload(
         user_id=user_id,
