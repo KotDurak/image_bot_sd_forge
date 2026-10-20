@@ -1,11 +1,11 @@
 # 🎨 AI Generation Bot
-> Telegram-бот для генерации изображений через Stable Diffusion (Forge API).  
+> Telegram-бот для генерации изображений, работающий в связке с **SD Gateway API** (FastAPI + Redis) для стабильной, масштабируемой и надежной обработки задач Stable Diffusion Forge.  
 > Умная очередь, монетизация, рекламная система и прозрачная аналитика.
 
 ## ✨ Возможности
 - 🖼 **Генерация** по промпту с выбором моделей и пресетов
-- 🔄 **Асинхронная очередь** с батчингом, автовосстановлением и переключением моделей
-- 💰 **Система кредитов**: бесплатные лимиты, покупка генераций, возврат при ошибках
+- 🔄 **Асинхронная очередь**: легковесный клиент бота взаимодействует с внешним Redis-Gateway, обеспечивая надежный батчинг, переключение моделей и защиту от падений при перезапуске
+- 💰 **Система кредитов**: бесплатные лимиты, покупка генераций, автоматический возврат при ошибках
 - 📢 **Рекламная система**: покупка показов, ротация, автоматическая деактивация
 - 📊 **Отчётность**: `/ad_report` с пагинацией, `JOIN`-логика, экспорт в CSV
 - 📥 **Импорт рекламы**: загрузка `.csv`/`.json` прямо в чат с валидацией
@@ -15,19 +15,27 @@
 ## 🛠 Технологический стек
 - `Python 3.10+` | `asyncio`
 - `python-telegram-bot v20+`
-- `aiosqlite` (асинхронная БД)
-- `Stable Diffusion Forge API`
-- Кастомный `GenerationQueue` с умным батчингом
+- `httpx` (асинхронный HTTP-клиент для связи с Gateway)
+- `aiosqlite` (асинхронная БД для локальных данных бота)
+- **Зависимость**: [SD Gateway API](https://github.com/KotDurak/sd_forge_queue) (FastAPI + Redis/Memurai + Stable Diffusion Forge)
 
 ## 🚀 Быстрый старт
+
+⚠️ **Важно:** Для работы бота требуется предварительно запущенный сервис **SD Gateway API**.
+
 ```bash
 git clone <repo-url>
 cd bot_for_sd
-python -m venv .venv && source .venv/bin/activate  # или .venv\Scripts\activate
+
+# Создание и активация виртуального окружения
+python -m venv .venv
+source .venv/bin/activate  # Для Windows: .venv\Scripts\activate
+
+# Установка зависимостей
 pip install -r requirements.txt
-cp .env.example .env  # заполни токены и настройки
-python main.py
-```
+
+# Настройка конфигурации
+cp .env.example .env  # Заполни токены и URL шлюза
 
 ## ⚙️ Конфигурация (.env)
 
@@ -37,13 +45,15 @@ python main.py
 # --- Основные настройки ---
 TELEGRAM_TOKEN=...        # Токен Telegram-бота
 ADMIN_USER_ID=...         # ID администратора
-FORGE_URL=http://localhost:7860  # URL сервиса генерации / API
 
-API_USER=...              # Логин для внешнего API
+# --- Настройки шлюза (Gateway) ---
+GATEWAY_URL=http://localhost:8000  # 🔥 URL API-прослойки с очередью (FastAPI + Redis)
+FORGE_URL=http://localhost:7860    # URL самого Stable Diffusion (используется Gateway-ем)
+
+API_USER=...              # Логин для внешнего API (если включен в Gateway)
 API_PASS=...              # Пароль для внешнего API
 
 MODE=PROD                 # Режим работы: PROD или DEV
-
 
 # --- Реклама и отчёты ---
 ADS_ENABLED=true          # Включить рекламу
