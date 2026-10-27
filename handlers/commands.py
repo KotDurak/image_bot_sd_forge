@@ -76,10 +76,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+# В начале файла commands.py убедись, что импорт есть:
+# from telegram import ChatAction
+
 async def generate(
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
         queue_manager,
+        status_msg=None,  # <-- НОВЫЙ ПАРАМЕТР
         custom_prompt: str = None,
         overrides: dict = None
 ) -> None:
@@ -100,18 +104,15 @@ async def generate(
         prompt = extract_prompt(update, context)
 
     if prompt is None:
-        try:
-            await update.effective_message.reply_text("⚠️ Укажи промпт.")
-        except (NetworkError, TimedOut) as e:
-            logger.warning(f"⚠️ Не удалось отправить 'Укажи промпт' юзеру {user_id} (сеть): {e}")
+        await update.effective_message.reply_text("⚠️ Укажи промпт.")
         return
 
-    # 3. Перевод / валидация
-    prompt = await prepare_prompt(update, prompt)
+    # 3. Перевод / валидация (здесь бот будет "думать", но пользователь уже видит "Превращаю в теги...")
+    prompt = await prepare_prompt(update, context, prompt)
     if prompt is None:
-        return # prepare_prompt, скорее всего, уже сам обработал ответ или лог
+        return
 
-    # 4. Сборка базового payload
+    # 4. Сборка payload
     settings = await get_user_settings(user_id)
     safe_preset = settings.get("preset")
     safe_model = config.DEFAULT_MODEL
@@ -124,25 +125,22 @@ async def generate(
         lora_string=settings.get("lora_string")
     )
 
-    # 🔥 ПРИМЕНЕНИЕ ПЕРЕОПРЕДЕЛЕНИЙ (OVERRIDES)
     if overrides:
         for key, value in overrides.items():
             payload[key] = value
-            logger.info(f"🔧 Применен override: {key} = {value}")
 
-    # 5. Отправка в очередь (КРИТИЧЕСКАЯ ТОЧКА)
+    # 5. 🔥 UX: Вместо создания нового сообщения, МЕНЯЕМ текст старого!
     try:
-        progress_msg = await update.effective_message.reply_text("⏳ Подключение к очереди...")
-    except (NetworkError, TimedOut) as e:
-        # Если сеть лежит, мы не можем даже отправить "⏳".
-        # Логируем и выходим, чтобы не ронять бота дальше.
-        logger.error(f"❌ КРИТИЧЕСКАЯ СЕТЕВАЯ ОШИБКА: Не удалось отправить сообщение о начале очереди юзеру {user_id}. Telegram API недоступен. {e}")
-        return
+        if status_msg:
+            progress_msg = await status_msg.edit_text("⏳ Подключение к очереди генерации...")
+        else:
+            progress_msg = await update.effective_message.reply_text("⏳ Подключение к очереди...")
     except Exception as e:
-        logger.exception(f"❌ Неожиданная ошибка при отправке сообщения о прогрессе: {e}")
-        return
+        logger.error(f"❌ Ошибка при обновлении сообщения о прогрессе: {e}")
+        # Фоллбэк, если редактирование не удалось
+        progress_msg = await update.effective_message.reply_text("⏳ Подключение к очереди...")
 
-    # 6. Сама постановка в очередь
+    # 6. Отправка в очередь
     try:
         await submit_to_queue(
             user_id=user_id,
@@ -154,17 +152,13 @@ async def generate(
             queue_manager=queue_manager,
             usage_type=usage_type
         )
-
-        # ТРИГГЕР РЕФЕРАЛЬНОГО БОНУСА
         await reward_referral_creator(user_id)
-
     except Exception as e:
         logger.error(f"❌ Ошибка очереди: {e}", exc_info=True)
-        # Пытаемся сообщить об ошибке, но тоже защищаемся от сбоя сети
         try:
             await update.effective_message.reply_text("❌ Ошибка при постановке в очередь.")
-        except (NetworkError, TimedOut):
-            logger.error(f"❌ Не удалось даже сообщить об ошибке очереди юзеру {user_id} из-за проблем с сетью.")
+        except Exception:
+            pass
 
 
 from presets import PRESETS  # Добавь этот импорт в начало файла, если его нет
@@ -360,3 +354,4 @@ async def open_app_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "Нажми на кнопку ниже, чтобы создать запрос.",
         reply_markup=keyboard
     )
+

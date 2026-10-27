@@ -121,7 +121,13 @@ class GatewayQueueManager:
                 raise ValueError("Gateway вернул completed, но без изображения")
 
             image_bytes = base64.b64decode(image_b64)
-            await send_image_with_actions(item.message, image_bytes, item.prompt[:100])
+            caption = (
+                f"✨ *Генерация завершена!*\n\n"
+                f"📝 *Использованные теги:*\n"
+                f"`\n{item.prompt}\n`\n\n"
+                f"💡 _Нажми на текст выше, чтобы скопировать теги для повторной генерации._"
+            )
+            await send_image_with_actions(item.message, image_bytes, caption)
 
             try:
                 await log_generation(

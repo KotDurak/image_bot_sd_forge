@@ -1,6 +1,8 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message
 import logging
 
+from telegram.constants import ParseMode
+
 logger = logging.getLogger(__name__)
 
 async def send_image_with_actions(
@@ -13,5 +15,6 @@ async def send_image_with_actions(
     await message.reply_photo(
         photo=image_bytes,
         caption=caption,
-        api_kwargs={"read_timeout": 30}
+        api_kwargs={"read_timeout": 30},
+        parse_mode=ParseMode.MARKDOWN,
     )

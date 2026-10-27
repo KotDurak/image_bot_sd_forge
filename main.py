@@ -1,9 +1,9 @@
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, \
     PreCheckoutQueryHandler
 from telegram import Update
+from telegram.constants import ChatAction
 from telegram.request import HTTPXRequest
-from handlers import payments, commands, callbacks, presets, admins, ad_management,platega_handler,promo_codes
-from db.async_core import async_db
+from handlers import payments, commands, callbacks, presets, admins, ad_management, platega_handler, promo_codes, webapp
 from handlers.callbacks import cb_vae_select
 from handlers.commands import vae_command
 from services.queue_manager import GenerationQueue
@@ -13,19 +13,19 @@ import asyncio
 from utils.logger import setup_logging
 from services.forge_options import ForgeOptionsCache
 import os
-from handlers import webapp
+from db.async_core import async_db
 
 setup_logging(config.MODE, logs_dir=config.LOGS_DIR)
 queue_manager = GenerationQueue()
-
 logger = logging.getLogger(__name__)
 
 os.environ['NO_PROXY'] = '127.0.0.1,localhost'
 os.environ['no_proxy'] = '127.0.0.1,localhost'
 
+
 async def post_init(app: Application):
     """Асинхронная инициализация: БД, очередь, логирование"""
-    await async_db.init()
+    await async_db.init()  # <-- ИСПРАВЛЕНО: убран config.
     logger.info("🔌 БД подключена (aiosqlite)")
     await queue_manager.start()
     ForgeOptionsCache.init(config.FORGE_URL)
@@ -38,21 +38,58 @@ async def post_init(app: Application):
 async def post_shutdown(app: Application):
     """Асинхронная очистка при завершении"""
     logger.info("🧹 Корректное завершение работы...")
-
     await queue_manager.stop()
-    await async_db.close()
-
+    await async_db.close()  # <-- ИСПРАВЛЕНО: убран config.
     logger.info("✅ Бот остановлен. Коты довольны.")
 
 
+# ==============================================================================
+# === UX: МГНОВЕННАЯ РЕАКЦИЯ И ПЕРЕДАЧА ЗАДАЧИ =================================
+# ==============================================================================
 async def generate_with_queue(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Wrapper для передачи queue_manager в handler"""
-    # Создаём корутину и планируем её выполнение
-    asyncio.create_task(commands.generate(update, context, queue_manager))
+    """Wrapper: мгновенно реагирует на пользователя и передает задачу в фон"""
+    logger.info(f"🔥 generate_with_queue вызван! Текст: {update.message.text[:50] if update.message else 'N/A'}")
+
+    # 1. МГНОВЕННАЯ РЕАКЦИЯ: Показываем "печатает..."
+    await update.message.reply_chat_action(ChatAction.TYPING)
+
+    # 2. ВРЕМЕННОЕ СООБЩЕНИЕ: Успокаиваем пользователя, что LLM думает
+    status_msg = await update.message.reply_text("🎨 Принимаю запрос и превращаю его в теги... Подожди пару секунд ✨")
+
+    try:
+        # Передаем status_msg в commands.generate, чтобы он мог его обновить, а не спамить новыми
+        task = asyncio.create_task(commands.generate(update, context, queue_manager, status_msg=status_msg))
+        task.add_done_callback(_handle_task_exception)
+    except Exception as e:
+        logger.error(f"❌ Ошибка при создании задачи: {e}", exc_info=True)
+        await update.message.reply_text("❌ Произошла ошибка при обработке запроса.")
 
 
+def _handle_task_exception(task):
+    try:
+        task.result()
+    except Exception as e:
+        logger.error(f"❌ Ошибка в фоновой задаче generate: {e}", exc_info=True)
+
+
+# ==============================================================================
+# === МАРШРУТИЗАЦИЯ СООБЩЕНИЙ ==================================================
+# ==============================================================================
+async def text_message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Чистый роутер: решает, куда направить текст, без сложных фильтров"""
+    user_id = update.effective_user.id
+    if user_id in presets._wizard_state:
+        logger.info(f"🎨 Текст идет в визард (user={user_id})")
+        await presets.handle_wizard_text(update, context)
+    else:
+        logger.info(f"🖼️ Текст идет в генерацию (user={user_id})")
+        await generate_with_queue(update, context)
+
+
+# ==============================================================================
+# === РЕГИСТРАЦИЯ ХЕНДЛЕРОВ ====================================================
+# ==============================================================================
 def register_handlers(app: Application):
-    """Регистрирует все обработчики"""
     app.add_handler(CommandHandler("start", commands.start))
     app.add_handler(CommandHandler("gen", generate_with_queue))
     app.add_handler(CommandHandler("help", callbacks.help_cmd))
@@ -63,7 +100,6 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("vae", vae_command))
     app.add_handler(CallbackQueryHandler(cb_vae_select, pattern="^vae_"))
 
-    # 📥 Импорт рекламы
     app.add_handler(CommandHandler("ad_template", ad_management.send_ad_template))
     app.add_handler(MessageHandler(
         (filters.Document.FileExtension("csv") | filters.Document.FileExtension("json")) & filters.User(config.ADMINS),
@@ -74,40 +110,38 @@ def register_handlers(app: Application):
     app.add_handler(CallbackQueryHandler(presets.preset_router, pattern="^preset|^presets"))
     app.add_handler(CommandHandler("preset_add", presets.quick_preset_cmd))
     app.add_handler(CommandHandler('preset_update', presets.preset_update_cmd))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Document.ALL, presets.handle_wizard_text))
+
+    # 🔥 ЕДИНЫЙ РОУТЕР ДЛЯ ВСЕГО ОБЫЧНОГО ТЕКСТА
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message_router))
+
     app.add_handler(CallbackQueryHandler(callbacks.settings_callback, pattern="^settings$"))
     app.add_handler(CallbackQueryHandler(callbacks.main_menu_callback, pattern="^main_menu$"))
     app.add_handler(CallbackQueryHandler(commands.loras_command, pattern="^loras_list$"))
 
-    # admin
+    # Admin
     app.add_handler(CommandHandler("unlimited", admins.unlimited_cmd))
     app.add_handler(CommandHandler("ban", admins.ban_cmd))
     app.add_handler(CommandHandler("reset", admins.reset_cmd))
     app.add_handler(CommandHandler('add_credits', admins.debug_add_credits))
-    # 📊 Новая статистика
     app.add_handler(CommandHandler("stats", admins.stats_cmd))
     app.add_handler(CommandHandler("top", admins.top_cmd))
     app.add_handler(CommandHandler("user_info", admins.user_info_cmd))
-
-    # 📊 Реклама и отчётность
     app.add_handler(CommandHandler("ad_report", admins.ad_report_cmd))
     app.add_handler(CallbackQueryHandler(admins.ad_report_cmd, pattern=r"^ad_page_\d+_\d+$"))
     app.add_handler(CallbackQueryHandler(admins.ad_csv_callback, pattern="^ad_csv_req_\d+$"))
 
-    # 💰 Платежи
+    # Payments
     app.add_handler(CommandHandler("buy", payments.buy_credits_cmd))
     app.add_handler(CallbackQueryHandler(payments.process_purchase_callback, pattern="^buy_"))
     app.add_handler(CommandHandler("balance", payments.balance_cmd))
     app.add_handler(CommandHandler("report", payments.report_cmd))
-
     app.add_handler(CallbackQueryHandler(platega_handler.platega_menu_cmd, pattern="^platega_menu$"))
-    app.add_handler(CallbackQueryHandler(platega_handler.start_platega_payment, pattern="^pkg_"))  # 🔥 pkg_
-    app.add_handler(CallbackQueryHandler(platega_handler.check_platega_status, pattern="^pay_"))  # 🔥 pay_
-
-    # ⭐ Обязательные хендлеры для Telegram Payments API
+    app.add_handler(CallbackQueryHandler(platega_handler.start_platega_payment, pattern="^pkg_"))
+    app.add_handler(CallbackQueryHandler(platega_handler.check_platega_status, pattern="^pay_"))
     app.add_handler(PreCheckoutQueryHandler(payments.pre_checkout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, payments.successful_payment_callback))
 
+    # Tools
     app.add_handler(CommandHandler("samplers", presets.list_samplers_cmd))
     app.add_handler(CommandHandler("schedulers", presets.list_schedulers_cmd))
     app.add_handler(CommandHandler("refresh_forge", presets.refresh_forge_options_cmd))
@@ -117,7 +151,7 @@ def register_handlers(app: Application):
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp.handle_webapp_data))
     app.add_handler(CommandHandler("app", commands.open_app_command))
 
-    # Промокоды
+    # Promo
     app.add_handler(CommandHandler("promo", promo_codes.promo_activate_cmd))
     app.add_handler(CommandHandler("create_promo", promo_codes.create_promo_cmd, filters.User(config.ADMINS)))
     app.add_handler(CommandHandler("promo_stats", promo_codes.promo_stats_cmd, filters.User(config.ADMINS)))
@@ -125,25 +159,21 @@ def register_handlers(app: Application):
 
 
 def main():
-    """Точка входа — синхронная, без asyncio.run()"""
-
     app = Application.builder() \
         .token(config.TELEGRAM_TOKEN) \
-        .request(HTTPXRequest(connect_timeout=15, read_timeout=30)) \
+        .request(HTTPXRequest(connect_timeout=15, read_timeout=60)) \
         .post_init(post_init) \
         .post_shutdown(post_shutdown) \
         .build()
+
     app.bot_data['queue_manager'] = queue_manager
     from handlers.error_handler import global_error_handler
     app.add_error_handler(global_error_handler)
+
     register_handlers(app)
 
     try:
-        # ✅ БЛОКИРУЮЩИЙ вызов — НЕ await!
-        app.run_polling(
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
+        app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
     except KeyboardInterrupt:
         logger.info("🛑 Получен сигнал остановки (Ctrl+C)")
     except Exception as e:
