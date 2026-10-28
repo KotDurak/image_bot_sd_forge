@@ -49,21 +49,27 @@ async def get_llm_tags(raw_prompt: str) -> str | None:
         # ПРАВКА 2: Оптимизированный, сухой системный промпт.
         # Убрали "магические" фразы про safety, они тратят токены и не работают.
         system_prompt = """ROLE: You are a stateless text-to-tag converter (Danbooru dictionary).
-TASK: Convert user request into concise visual tags in English, comma-separated.
+        TASK: Convert user request into concise visual tags in English, comma-separated.
 
-CRITICAL RULES:
-1. OUTPUT FORMAT: ONLY tags separated by commas. No sentences, no explanations, no markdown.
-2. SUBJECT: Always start with a count tag (1girl, 1boy, 2girls, etc.) when a person is mentioned.
-3. VISUAL ONLY: Describe ONLY what is explicitly requested. Use visual consequences, not abstract concepts (e.g., use 'broken furniture, debris' instead of 'destroying, chaos').
-4. TAG STRUCTURE: Split compound ideas into 1-2 word tags. 
-5. NO QUALITY TAGS: NEVER generate quality tags (masterpiece, best quality) — the system adds them.
-6. FORBIDDEN: young, little, childish, loli, shota, underage. Never output these.
+        CRITICAL RULES:
+        1. OUTPUT FORMAT: ONLY tags separated by commas. No sentences, no explanations, no markdown.
+        2. SUBJECT: Start with a count tag (1girl, 1boy, etc.) ONLY if a HUMAN person/character is EXPLICITLY mentioned. 
+           - Animals, creatures, robots, vehicles, objects, nature -> NO human tags, even if anthropomorphic (e.g., lizard in spacesuit = lizard, NOT 1boy).
+           - If no person is mentioned -> add "no humans" to prevent accidental character generation.
+        3. VISUAL ONLY: Describe ONLY what is explicitly requested. Use visual consequences, not abstract concepts (e.g., use 'broken furniture, debris' instead of 'destroying, chaos').
+        4. TAG STRUCTURE: Split compound ideas into 1-2 word tags. 
+        5. NO QUALITY TAGS: NEVER generate quality tags (masterpiece, best quality) — the system adds them.
+        6. FORBIDDEN: young, little, childish, loli, shota, underage. Never output these.
 
-EXAMPLES:
-Input: "девушка в красном платье танцует под дождём"
-Output: 1girl, red dress, dancing, rain, wet, outdoors, dynamic pose
-Input: "Рокси Мигурдия, соло, плоская грудь, маленькое тело, синие волосы, две косы"
-Output: roxy migurdia, solo, flat chest, petite body, blue hair, twin braids"""
+        EXAMPLES:
+        Input: "девушка в красном платье танцует под дождём"
+        Output: 1girl, red dress, dancing, rain, wet, outdoors, dynamic pose
+        Input: "Рокси Мигурдия, соло, плоская грудь, маленькое тело, синие волосы, две косы"
+        Output: roxy migurdia, solo, flat chest, petite body, blue hair, twin braids
+        Input: "Самолёт пролетающий над городом"
+        Output: airplane, flying, cityscape, sky, clouds, no humans
+        Input: "ящерица в космосе в скафандре"
+        Output: lizard, spacesuit, space, stars, no humans, creature focus"""
 
         # ПРАВКА 3: Отключаем reasoning для экономии токенов и времени
         response = await client.chat.completions.create(
