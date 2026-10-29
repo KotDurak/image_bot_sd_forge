@@ -10,9 +10,17 @@ from config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, DEFAULT_MODEL
 logger = logging.getLogger(__name__)
 
 CYRILLIC_RE = re.compile(r'[а-яА-ЯёЁ]')
-
+MIN_VALID_TAG_RATIO = 0.8
 # ПРАВКА 1: Добавили \- и \(\) чтобы пропускать теги вроде "one-shoulder" или "(solo)"
 TAGS_PATTERN = re.compile(r'^[a-zA-Z0-9_\s,\-\(\)]+$')
+TAG_BODY_RE = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*$')
+SPECIAL_TAG_RE = re.compile(r'^<(?:lora|lyco|embedding|embed):[^<>]+>$', re.I)
+# Разговорные слова => это не тег, а просьба
+
+CONVERSATIONAL_RE = re.compile(
+    r'\b(please|draw|generate|create|make me|can you|could you| depicting|of a )\b',
+    re.I
+)
 
 
 def extract_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str | None:
@@ -27,9 +35,63 @@ def extract_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str | 
     return text.replace("/gen", "", 1).strip() or None
 
 
+def _split_loose_tags(text: str) -> list[str]:
+    """
+    Дробит промпт на теги, мирясь с пунктуацией пользователя.
+    'Footwork. Smiling' -> ['Footwork', 'Smiling']
+    '<lora:...v1.0...:0.8>' -> остаётся одним целым тегом.
+    """
+    tags = []
+    for fragment in re.split(r'[,;\n]', text):
+        fragment = fragment.strip()
+        if not fragment:
+            continue
+
+        if fragment.startswith('<'):
+            tags.append(fragment)          # LoRA/Embedding не трогаем
+            continue
+
+        # Точка + пробел внутри фрагмента — скорее всего, конец тега
+        for sub in re.split(r'\.\s+', fragment):
+            sub = re.sub(r'[.!?;:]+\s*$', '', sub).strip()
+            if sub:
+                tags.append(sub)
+    return tags
+
+
+def _is_valid_tag(tag: str) -> bool:
+    if SPECIAL_TAG_RE.fullmatch(tag):
+        return True
+
+    if CYRILLIC_RE.search(tag):
+        return False
+
+    # Danbooru-тег — это короткая визуальная метка, не предложение
+    words = tag.split()
+    if len(words) > 4 or len(tag) > 60:
+        return False
+
+    if CONVERSATIONAL_RE.search(tag):
+        return False
+
+    return bool(TAG_BODY_RE.fullmatch(tag))
+
+
 def is_likely_tags(text: str) -> bool:
-    """Проверяет, выглядит ли текст как готовые Danbooru-теги."""
-    return bool(TAGS_PATTERN.match(text.strip()))
+    """Готовые теги, даже если пользователь поставил точку или один мусорный тег."""
+    tags = _split_loose_tags(text)
+    if not tags:
+        return False
+
+    valid_count = sum(1 for tag in tags if _is_valid_tag(tag))
+    ratio = valid_count / len(tags)
+
+    logger.debug(f"Tag ratio: {ratio:.2f} ({valid_count}/{len(tags)})")
+    return ratio >= MIN_VALID_TAG_RATIO
+
+def normalize_prompt(text: str) -> str:
+    """Собираем теги обратно в чистый вид: без 'Footwork.' и хвостовых точек."""
+    return ", ".join(_split_loose_tags(text))
 
 
 async def get_llm_tags(raw_prompt: str) -> str | None:
@@ -114,7 +176,7 @@ async def prepare_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE, raw
     # ШАГ 1: Это уже готовые теги? (Самый быстрый путь)
     if is_likely_tags(raw_prompt):
         logger.info("Распознаны готовые теги, пропускаем LLM.")
-        return raw_prompt
+        return normalize_prompt(raw_prompt)  # важно: не raw_prompt с точкой в конце
 
     # ШАГ 2: Пытаемся получить теги через LLM
     llm_result = await get_llm_tags(raw_prompt)
